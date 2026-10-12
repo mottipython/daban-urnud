@@ -87,8 +87,6 @@ def main():
     g = g[m:n - m, m:n - m, :3]
     subprocess.run(["magick", "-size", f"{g.shape[1]}x{g.shape[0]}", "-depth", "8", "RGB:-", "-resize", "512x512!",
                     "-brightness-contrast", "12x-6", "-quality", "90", f"{OUT}/gravel.jpg"], input=np.ascontiguousarray(g).tobytes(), check=True)
-    if len(got) > 2:
-        c = trim(got[2]); save(c, round(c.shape[1] * 200 / c.shape[0]), 200, f"{OUT}/weight.png")
     print("joint, gravel")
     # the blasts: split where the picture is dark all the way down
     img = load(f"{SRC}/blasts.jpeg")

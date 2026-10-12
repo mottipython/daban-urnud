@@ -22,8 +22,8 @@ One change of course, about a minute and a half, then another at a different ang
 
 - **In orbit.** The ship coasts over Arbre. A round window looks along the Core at
   one ring of four orbs going round; they never stop.
-- **The turn.** No thrusters. A second window shows counterweights running round
-  tracks inside the ship; the ship turns the other way, and stops when they stop.
+- **The turn.** No thrusters. Counterweights run round tracks inside the ship,
+  out of sight, and the ship swings round the other way.
 - **The burn.** A charge drops out through the plate every second or two, flies a
   little way aft and goes off. The plasma hits the plate, and the plate's ablative
   layer glows and boils off. The stern corner is driven in, its five struts
@@ -37,7 +37,7 @@ springs. Nothing about how it flexes is a canned animation.
 | | |
 |---|---|
 | ![](docs/screenshots/02-the-orbs.jpg) | ![](docs/screenshots/03-the-turn.jpg) |
-| The orbs, seen along the Core | Counterweights turning the ship |
+| The orbs, seen along the Core | The ship turning |
 | ![](docs/screenshots/04-charge-away.jpg) | ![](docs/screenshots/06-the-frame-takes-it.jpg) |
 | A charge on its way out | The frame takes the blast |
 
@@ -53,8 +53,8 @@ counterweights on internal tracks, the Adrakhonic theorem on the hull, and the b
 being seen from Arbre as a string of sparks.
 
 Mine: how it all looks from the side, the plate sitting on one corner, the ablative
-layer on the plate (usual for this kind of drive), what the tracks and
-counterweights look like, how stiff the frame is, and the timing.
+layer on the plate (usual for this kind of drive), how stiff the frame is, and
+the timing.
 
 ## Install
 
@@ -62,7 +62,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.0.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.1.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -71,11 +71,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.0-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.1-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.0_amd64.deb
+    sudo apt install ./daban-urnud_1.0.1_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the

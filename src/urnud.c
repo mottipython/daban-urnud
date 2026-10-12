@@ -52,7 +52,6 @@ ART(space, "space.jpg")
 ART(banner, "banner.png")
 ART(joint, "joint.png")
 ART(gravel, "gravel.jpg")
-ART(weight, "weight.png")
 ART(plate, "plate.png")
 ART(orb, "orb.png")
 ART(hub, "hub.png")
@@ -63,13 +62,12 @@ ART(flash, "flash.jpg")
 ART(plasma, "plasma.jpg")
 ART(vapour, "vapour.jpg")
 
-enum { SP_SPACE, SP_BANNER, SP_JOINT, SP_GRAVEL, SP_WEIGHT, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
+enum { SP_SPACE, SP_BANNER, SP_JOINT, SP_GRAVEL, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
 static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } sprite[NSPRITE] = {
     {art_space, art_space_end},
     {art_banner, art_banner_end},
     {art_joint, art_joint_end},
     {art_gravel, art_gravel_end},
-    {art_weight, art_weight_end},
     {art_plate, art_plate_end},
     {art_orb, art_orb_end},
     {art_hub, art_hub_end},
@@ -115,7 +113,7 @@ static int opt_w = 1920, opt_h = 1200;
 /* ---- colours ---- */
 typedef struct { Uint8 r, g, b; } Rgb;
 static const Rgb BG = {6, 8, 16}, INK = {46, 32, 22}, CHORD = {130, 44, 30}, PAPER = {253, 246, 226};
-static const Rgb STEEL = {150, 152, 158}, DEEP = {22, 28, 46}, WOODY = {96, 74, 56};
+static const Rgb STEEL = {150, 152, 158}, DEEP = {22, 28, 46};
 
 /* ---- geometry buffer ---- */
 static SDL_Vertex *vb;
@@ -476,34 +474,12 @@ static void draw_frame(void)
         if (vseen[i]) ship_pic_turned(SP_JOINT, pos[i][0], pos[i][1], wide(SP_JOINT, 0.125), 0.125, 1, i * 37.0);
 }
 
-/* The tracks, in a round window: counterweights run round one way and the ship
- * turns the other. They stop, and so does it. */
-static void draw_tracks(double cx, double cy, double R)
-{
-    disc(cx, cy, R * 1.06, col(STEEL, 1), col(STEEL, 1));
-    disc(cx, cy, R, col(DEEP, 1), col(BG, 1));
-    double tr = R * 0.68, a0 = -ship_deg * M_PI / 180 * 9;
-    for (int k = 0; k < 48; k++) { /* sleepers */
-        double a = k * M_PI / 24;
-        line(cx + cos(a) * tr * 0.88, cy + sin(a) * tr * 0.88, cx + cos(a) * tr * 1.12, cy + sin(a) * tr * 1.12, R * 0.022, col(WOODY, 1));
-    }
-    ring(cx, cy, tr * 0.93, R * 0.028, col(STEEL, 1));
-    ring(cx, cy, tr * 1.07, R * 0.028, col(STEEL, 1));
-    flush(ren);
-    for (int i = 0; i < 3; i++) {
-        double a = a0 + i * 2 * M_PI / 3;
-        turned(SP_WEIGHT, cx + cos(a) * tr * 0.9, cy + sin(a) * tr * 0.9, R * 0.3, a * 180 / M_PI + 180);
-    }
-    ring(cx, cy, R * 1.03, R * 0.07, col(INK, 0.9));
-    flush(ren);
-}
-
 static void caption(const char **l1, const char **l2)
 {
     static char count[64];
     *l1 = "THE DABAN URNUD"; *l2 = "THE GEOMETERS' SHIP, IN ORBIT ABOUT ARBRE";
     if (T > 8) { *l1 = "INSIDE, SIXTEEN ORBS TURN ABOUT THE CORE"; *l2 = "FOUR FOR EACH RACE: URNUD, TRO, LATERRE AND FTHOS"; }
-    if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "COUNTERWEIGHTS RUN ROUND TRACKS INSIDE, AND THE SHIP TURNS THE OTHER WAY"; }
+    if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "NO THRUSTERS: COUNTERWEIGHTS ON TRACKS INSIDE SWING IT ROUND"; }
     if (T >= T_BURN - 3) { *l1 = "PROPULSION CHARGES"; *l2 = "ATOMIC BOMBS, LET OUT THROUGH THE PLATE ONE BY ONE"; }
     if (T >= T_BURN + 12) { *l1 = "THIRTY STRUTS, EVERY ONE A SHOCK ABSORBER"; *l2 = "THE BLOW RUNS FORWARD THROUGH THE WHOLE FRAME"; }
     if (T >= T_BURN + 26) {
@@ -594,12 +570,6 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
         double R = h * 0.15 * grow, cx = w * 0.115, cy = h * 0.22;
         draw_core(cx, cy, R);
         if (grow > 0.9) text("LOOKING ALONG THE CORE", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
-    }
-    double tg = ease(ramp(T, T_TURN - 2, T_TURN)) * (1 - ease(ramp(T, T_BURN - 2, T_BURN)));
-    if (tg > 0.01) {
-        double R = h * 0.15 * tg, cx = w * 0.115, cy = h * 0.6;
-        draw_tracks(cx, cy, R);
-        if (tg > 0.9) text("THE TRACKS", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
     }
     const char *l1, *l2;
     caption(&l1, &l2);
