@@ -71,7 +71,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.7.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.8.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -80,11 +80,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.7-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.8-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.7_amd64.deb
+    sudo apt install ./daban-urnud_1.0.8_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the

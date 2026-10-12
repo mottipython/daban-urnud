@@ -544,7 +544,11 @@ static void draw_core(double cx, double cy, double R)
     double tilt = 1.05, ax = sin(tilt) * 0.82, ay = sin(tilt) * 0.57, az = cos(tilt);
     double ux = -0.57, uy = 0.82;                              /* across the Core, flat on the screen */
     double vx = -az * uy, vy = az * ux, vz = ax * uy - ay * ux; /* and the other way across */
-    double rho = R * 0.168, reach = rho * 1.4142, gap = rho * 1.682; /* touching in the ring, and nested level on level */
+    double rho = R * 0.18;
+    /* The four in a level touch and each level nests in the last; they are set a
+     * little closer than that, pressed into each other, the way they look when the
+     * whole stack is seen at once. */
+    double reach = rho * 1.4142 * 0.9, gap = rho * 1.682 * 0.9;
     struct { double x, y, z, hx, hy, deg; } o[16], t;
     for (int k = 0; k < 4; k++) for (int i = 0; i < 4; i++) {
         double along = (k - 1.5) * gap, a = spin + i * M_PI / 2 + k * M_PI / 4, c = cos(a), sn = sin(a);
@@ -560,7 +564,7 @@ static void draw_core(double cx, double cy, double R)
     /* the icosahedron they fill, the Core running from the middle of the stern face
      * to the middle of the bow face: a little over 5 orb-radii from the middle to a
      * corner is the size at which the stacked orbs just fit it */
-    double big = 5.2 * rho / RADIUS, fx[NV], fy[NV], fz[NV];
+    double big = 5.0 * rho / RADIUS, fx[NV], fy[NV], fz[NV];
     for (int i = 0; i < NV; i++) {
         fx[i] = cx + (ax * rest[i][0] + ux * rest[i][1] + vx * rest[i][2]) * big;
         fy[i] = cy + (ay * rest[i][0] + uy * rest[i][1] + vy * rest[i][2]) * big;
