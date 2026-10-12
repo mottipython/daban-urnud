@@ -478,7 +478,7 @@ static void caption(const char **l1, const char **l2)
 {
     static char count[64];
     *l1 = "THE DABAN URNUD"; *l2 = "THE GEOMETERS' SHIP, IN ORBIT ABOUT ARBRE";
-    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "FOUR LEVELS OF FOUR ORBS, EACH NESTED IN THE HOLLOWS OF THE LAST"; }
+    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "FOUR LEVELS OF FOUR ORBS, NESTED TO FILL THE ICOSAHEDRON"; }
     if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "NO THRUSTERS: COUNTERWEIGHTS ON TRACKS INSIDE SWING IT ROUND"; }
     if (T >= T_BURN - 3) { *l1 = "PROPULSION CHARGES"; *l2 = "ATOMIC BOMBS, LET OUT THROUGH THE PLATE ONE BY ONE"; }
     if (T >= T_BURN + 12) { *l1 = "THIRTY STRUTS, EVERY ONE A SHOCK ABSORBER"; *l2 = "THE BLOW RUNS FORWARD THROUGH THE WHOLE FRAME"; }
@@ -527,19 +527,36 @@ static void draw_core(double cx, double cy, double R)
         o[n].deg = atan2(o[n].y - o[n].hy, o[n].x - o[n].hx) * 180 / M_PI + 90;
     }
     for (int i = 0; i < 16; i++) for (int j = i + 1; j < 16; j++) if (o[j].z < o[i].z) { t = o[i]; o[i] = o[j]; o[j] = t; }
-    double e0 = -2.1 * gap, e1 = 2.1 * gap;
-    line(cx + ax * e0, cy + ay * e0, cx + ax * e1, cy + ay * e1, R * 0.085, col(INK, 1));
-    line(cx + ax * e0, cy + ay * e0, cx + ax * e1, cy + ay * e1, R * 0.055, col(STEEL, 1));
+    /* the icosahedron they fill, corner to corner along the Core: 5 orb-radii from
+     * the middle to a corner is the size at which the stacked orbs just fit it */
+    double big = 5 * rho / RADIUS, fx[NV], fy[NV], fz[NV];
+    for (int i = 0; i < NV; i++) {
+        fx[i] = cx + (ax * rest[i][0] + ux * rest[i][1] + vx * rest[i][2]) * big;
+        fy[i] = cy + (ay * rest[i][0] + uy * rest[i][1] + vy * rest[i][2]) * big;
+        fz[i] = az * rest[i][0] + vz * rest[i][2];
+    }
+    for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] <= 0) /* the far struts, behind everything */
+        line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.02, col(STEEL, 0.4));
+    /* the Core, from the corner at the stern to the corner at the bow */
+    line(fx[0], fy[0], fx[11], fy[11], R * 0.1, col(INK, 1));
+    line(fx[0], fy[0], fx[11], fy[11], R * 0.07, col(STEEL, 1));
     flush(ren);
     for (int n = 0; n < 16; n++) {
         double size = 1 + 0.12 * o[n].z / (2 * gap);
         turned(SP_ORB, o[n].x, o[n].y, 2 * rho * size, o[n].deg);
     }
-    /* the near end of the Core, standing out in front of the nearest level */
-    line(cx + ax * 1.2 * gap, cy + ay * 1.2 * gap, cx + ax * e1, cy + ay * e1, R * 0.085, col(INK, 1));
-    line(cx + ax * 1.2 * gap, cy + ay * 1.2 * gap, cx + ax * e1, cy + ay * e1, R * 0.055, col(STEEL, 1));
-    disc(cx + ax * e1, cy + ay * e1, R * 0.05, col(INK, 1), col(INK, 1));
-    disc(cx + ax * e1, cy + ay * e1, R * 0.034, col(STEEL, 1), col(STEEL, 1));
+    /* the near end of the Core, coming out of the stack towards us */
+    double nx = cx + ax * 1.6 * gap, ny = cy + ay * 1.6 * gap;
+    line(nx, ny, fx[11], fy[11], R * 0.1, col(INK, 1));
+    line(nx, ny, fx[11], fy[11], R * 0.07, col(STEEL, 1));
+    for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] > 0) { /* the near struts, over the orbs */
+        line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.034, col(INK, 0.85));
+        line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.018, col(STEEL, 1));
+    }
+    for (int i = 0; i < NV; i++) if (fz[i] > -0.05) {
+        disc(fx[i], fy[i], R * 0.036, col(INK, 1), col(INK, 1));
+        disc(fx[i], fy[i], R * 0.024, col(STEEL, 1), col(STEEL, 1));
+    }
     ring(cx, cy, R * 1.03, R * 0.07, col(INK, 0.9));
     flush(ren);
 }
@@ -594,7 +611,7 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
 
     double grow = ease(ramp(T, 6, 9)) * (1 - ease(ramp(T, ROUND - 6, ROUND - 3)));
     if (grow > 0.01) {
-        double R = h * 0.2 * grow, cx = w * 0.14, cy = h * 0.27;
+        double R = h * 0.22 * grow, cx = w * 0.15, cy = h * 0.29;
         draw_core(cx, cy, R);
         if (grow > 0.9) text("THE ORBSTACKS", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
     }
