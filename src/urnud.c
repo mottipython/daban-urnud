@@ -244,14 +244,16 @@ static void text(const char *str, double cx, double y, double s, double weight, 
  *
  * Seen from the side, flying to the right. The ship is an icosahedron whose thirty
  * edges are shock absorbers, joined at its twelve corners, with a skin of gravel
- * over them and the pusher plate on the corner at the stern. To change course it
+ * over them. One of its twenty faces, the one at the stern, carries the pusher
+ * plate, which stands off it on shock absorbers of its own. To change course it
  * first turns, by running counterweights round tracks inside itself, so that the
  * plate is behind the way it wants to go. Then it lets propulsion charges out
  * through the middle of the plate one after another. Each bursts a little way
- * behind; the plasma hits the plate, and the blow travels forward through the
- * frame from strut to strut.
+ * behind; the plasma hits the plate, the plate's shock absorbers take the first
+ * of it, and the rest travels forward through the frame from strut to strut.
  *
- * The frame is worked out as what it is: twelve masses and thirty damped springs.
+ * The frame is worked out as what it is: twelve masses and thirty damped springs,
+ * and the plate a thirteenth mass on three more.
  * Lengths are in hull-heights, in the ship's own frame: x forward, y down, z
  * towards us. */
 static double T, anim_t;
@@ -261,7 +263,7 @@ static uint64_t seed_state;
 #define T_COAST 72.0    /* last charge has gone */
 #define ROUND 96.0
 #define BLOW 1.25        /* what one blast does to the plate */
-#define BURST_X (-1.22) /* where a charge goes off */
+#define BURST_X (-1.08) /* where a charge goes off */
 #define FLIGHT 0.55     /* seconds from the plate to there */
 static double ship_deg;           /* which way the ship points, degrees clockwise on screen */
 static double turn_to;            /* the heading this burn needs */
@@ -269,7 +271,11 @@ static double turn_to;            /* the heading this burn needs */
 #define NE 30
 #define NF 20
 #define RADIUS 0.5
-static double pos[NV][3], vel[NV][3], rest[NV][3]; /* the corners; 0 is the stern, where the plate is */
+static double pos[NV][3], vel[NV][3], rest[NV][3]; /* the corners; 0, 1 and 2 are the face at the stern */
+static double plate_x, plate_v;                    /* the plate, which only moves fore and aft */
+#define PLATE_OFF 0.17                             /* how far the plate stands off its face */
+#define PLATE_MASS 3.0
+#define FACE_X (-0.7947 * RADIUS)                  /* where the stern face is, along the ship */
 static int edge[NE][2], face[NF][3];
 static double edge_len;
 static double speed, travelled;   /* what the burn has added, for the stars to drift by */
@@ -291,13 +297,25 @@ static double ease(double x) { return x * x * (3 - 2 * x); }
 
 static void build_frame(void)
 {
-    double r = 2 * RADIUS / sqrt(5), x = RADIUS / sqrt(5), roll = M_PI / 2 + 0.07;
+    double r = 2 * RADIUS / sqrt(5), x = RADIUS / sqrt(5), roll = 0;
     rest[0][0] = -RADIUS; rest[0][1] = rest[0][2] = 0;
     rest[11][0] = RADIUS; rest[11][1] = rest[11][2] = 0;
     for (int k = 0; k < 5; k++) {
         double a = roll + k * 2 * M_PI / 5, b = a + M_PI / 5;
         rest[1 + k][0] = -x; rest[1 + k][1] = r * cos(a); rest[1 + k][2] = r * sin(a);
         rest[6 + k][0] = x; rest[6 + k][1] = r * cos(b); rest[6 + k][2] = r * sin(b);
+    }
+    /* turn it so that the face with corners 0, 1 and 2 looks straight astern */
+    double e1[3], e2[3], e3[3], n1 = 0, n2 = 0, d = 0, turn = 0.35;
+    for (int c = 0; c < 3; c++) { e1[c] = -(rest[0][c] + rest[1][c] + rest[2][c]); n1 += e1[c] * e1[c]; }
+    for (int c = 0; c < 3; c++) { e1[c] /= sqrt(n1); d += rest[0][c] * e1[c]; }
+    for (int c = 0; c < 3; c++) { e2[c] = rest[0][c] - d * e1[c]; n2 += e2[c] * e2[c]; }
+    for (int c = 0; c < 3; c++) e2[c] /= sqrt(n2);
+    e3[0] = e1[1] * e2[2] - e1[2] * e2[1]; e3[1] = e1[2] * e2[0] - e1[0] * e2[2]; e3[2] = e1[0] * e2[1] - e1[1] * e2[0];
+    for (int i = 0; i < NV; i++) {
+        double a = 0, b = 0, g = 0;
+        for (int c = 0; c < 3; c++) { a += rest[i][c] * e1[c]; b += rest[i][c] * e2[c]; g += rest[i][c] * e3[c]; }
+        rest[i][0] = a; rest[i][1] = b * cos(turn) - g * sin(turn); rest[i][2] = b * sin(turn) + g * cos(turn);
     }
     edge_len = RADIUS / sin(2 * M_PI / 5);
     int ne = 0, nf = 0;
@@ -317,13 +335,13 @@ static void new_round(void)
     ship_deg = 0; speed = travelled = 0;
     if (edge_len == 0) build_frame();
     memcpy(pos, rest, sizeof pos); memset(vel, 0, sizeof vel);
+    plate_x = FACE_X - PLATE_OFF; plate_v = 0;
     turn_to = (frand() < 0.5 ? -1 : 1) * (14 + frand() * 22);
     period = 1.25 + frand() * 0.7;
     next_charge = T_BURN; last_burst = -100; charges = 0;
     for (int i = 0; i < NFLY; i++) fly[i] = -1;
 }
 
-static double mass(int i) { return i == 0 ? 3.0 : 1.0; } /* the stern corner carries the plate */
 
 /* the frame for a short moment h: every strut a spring with a damper in it */
 static void frame_step(double h)
@@ -340,11 +358,21 @@ static void frame_step(double h)
         if (short_by > 0) push -= 4000 * short_by;
         for (int c = 0; c < 3; c++) { f[a][c] += push * d[c]; f[b][c] -= push * d[c]; }
     }
-    for (int i = 0; i < NV; i++) for (int c = 0; c < 3; c++) { com[c] += mass(i) * pos[i][c]; comv[c] += mass(i) * vel[i][c]; }
-    for (int i = 0; i < NV; i++) m += mass(i);
+    for (int i = 0; i < NV; i++) for (int c = 0; c < 3; c++) { com[c] += pos[i][c]; comv[c] += vel[i][c]; }
+    /* the plate's own three shock absorbers, one to each corner of the stern face */
+    double pf = 0;
+    for (int i = 0; i < 3; i++) {
+        double gapx = pos[i][0] - plate_x, push = 70 * (gapx - PLATE_OFF) + 5 * (vel[i][0] - plate_v);
+        if (gapx < PLATE_OFF * 0.45) push -= 3000 * (PLATE_OFF * 0.45 - gapx); /* the end of their travel */
+        f[i][0] -= push; pf += push;
+    }
+    com[0] += PLATE_MASS * (plate_x - (FACE_X - PLATE_OFF)); comv[0] += PLATE_MASS * plate_v;
+    m = NV + PLATE_MASS;
+    plate_v += (pf / PLATE_MASS - 5 * com[0] / m - 3.4 * comv[0] / m) * h;
+    plate_x += plate_v * h;
     for (int i = 0; i < NV; i++) for (int c = 0; c < 3; c++) {
         /* we travel with the ship, so it eases back to the middle of the picture */
-        vel[i][c] += (f[i][c] / mass(i) - 5 * com[c] / m - 3.4 * comv[c] / m) * h;
+        vel[i][c] += (f[i][c] - 5 * com[c] / m - 3.4 * comv[c] / m) * h;
         pos[i][c] += vel[i][c] * h;
     }
 }
@@ -362,7 +390,7 @@ static void update(double dt)
         next_charge += period;
     }
     for (int i = 0; i < NFLY; i++)
-        if (fly[i] >= 0 && T - fly[i] >= FLIGHT) { fly[i] = -1; last_burst = T; charges++; vel[0][0] += BLOW; }
+        if (fly[i] >= 0 && T - fly[i] >= FLIGHT) { fly[i] = -1; last_burst = T; charges++; plate_v += BLOW; }
     int steps = (int)ceil(dt / 0.004);
     for (int k = 0; k < steps; k++) frame_step(dt / steps);
     speed += ((T >= T_BURN && T < T_COAST + 1 ? 1.0 : 0.0) - speed) * fmin(1, dt * 0.4);
@@ -516,7 +544,7 @@ static void draw_core(double cx, double cy, double R)
     double tilt = 1.05, ax = sin(tilt) * 0.82, ay = sin(tilt) * 0.57, az = cos(tilt);
     double ux = -0.57, uy = 0.82;                              /* across the Core, flat on the screen */
     double vx = -az * uy, vy = az * ux, vz = ax * uy - ay * ux; /* and the other way across */
-    double rho = R * 0.18, reach = rho * 1.4142, gap = rho * 1.682; /* touching in the ring, and nested level on level */
+    double rho = R * 0.168, reach = rho * 1.4142, gap = rho * 1.682; /* touching in the ring, and nested level on level */
     struct { double x, y, z, hx, hy, deg; } o[16], t;
     for (int k = 0; k < 4; k++) for (int i = 0; i < 4; i++) {
         double along = (k - 1.5) * gap, a = spin + i * M_PI / 2 + k * M_PI / 4, c = cos(a), sn = sin(a);
@@ -529,9 +557,10 @@ static void draw_core(double cx, double cy, double R)
         o[n].deg = atan2(ay, ax) * 180 / M_PI;
     }
     for (int i = 0; i < 16; i++) for (int j = i + 1; j < 16; j++) if (o[j].z < o[i].z) { t = o[i]; o[i] = o[j]; o[j] = t; }
-    /* the icosahedron they fill, corner to corner along the Core: 5 orb-radii from
-     * the middle to a corner is the size at which the stacked orbs just fit it */
-    double big = 5 * rho / RADIUS, fx[NV], fy[NV], fz[NV];
+    /* the icosahedron they fill, the Core running from the middle of the stern face
+     * to the middle of the bow face: a little over 5 orb-radii from the middle to a
+     * corner is the size at which the stacked orbs just fit it */
+    double big = 5.2 * rho / RADIUS, fx[NV], fy[NV], fz[NV];
     for (int i = 0; i < NV; i++) {
         fx[i] = cx + (ax * rest[i][0] + ux * rest[i][1] + vx * rest[i][2]) * big;
         fy[i] = cy + (ay * rest[i][0] + uy * rest[i][1] + vy * rest[i][2]) * big;
@@ -539,14 +568,24 @@ static void draw_core(double cx, double cy, double R)
     }
     for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] <= 0) /* the far struts, behind everything */
         line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.02, col(STEEL, 0.4));
-    /* the Core, from the corner at the stern to the corner at the bow; the orbs are
-     * all round it, so they are drawn over it */
-    line(fx[0], fy[0], fx[11], fy[11], R * 0.1, col(INK, 1));
-    line(fx[0], fy[0], fx[11], fy[11], R * 0.07, col(STEEL, 1));
-    flush(ren);
-    for (int n = 0; n < 16; n++) {
-        double size = 1 + 0.12 * o[n].z / (2 * gap);
-        turned(SP_ORB, o[n].x, o[n].y, 2 * rho * size, o[n].deg);
+    /* The Core, from the stern face to the bow face, and the orbs going round it.
+     * The Core is drawn in short lengths, and lengths and orbs are put down together
+     * from the farthest to the nearest, so an orb on the far side of the Core goes
+     * behind it and comes out in front as it comes round. */
+    double ce = 0.7947 * RADIUS * big;
+    enum { NSEG = 14 };
+    int next = 0;
+    for (int k = 0; k <= NSEG; k++) {
+        double zk = k < NSEG ? az * (-ce + (k + 0.5) * 2 * ce / NSEG) / reach : 1e9; /* to compare with the orbs */
+        for (; next < 16 && o[next].z / reach <= zk; next++) {
+            double size = 1 + 0.12 * o[next].z / (2 * gap);
+            flush(ren);
+            turned(SP_ORB, o[next].x, o[next].y, 2 * rho * size, o[next].deg);
+        }
+        if (k == NSEG) break;
+        double t0 = -ce + k * 2 * ce / NSEG - 0.5, t1 = -ce + (k + 1) * 2 * ce / NSEG + 0.5;
+        line(cx + ax * t0, cy + ay * t0, cx + ax * t1, cy + ay * t1, R * 0.1, col(INK, 1));
+        line(cx + ax * t0, cy + ay * t0, cx + ax * t1, cy + ay * t1, R * 0.07, col(STEEL, 1));
     }
     for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] > 0) { /* the near struts, over the orbs */
         line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.034, col(INK, 0.85));
@@ -584,7 +623,12 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     sH = h * 0.42; sc = cos(ship_deg * M_PI / 180); ss = sin(ship_deg * M_PI / 180);
     sx0 = w * 0.56 + sin(anim_t * 47) * shake; sy0 = h * 0.42 + cos(anim_t * 53) * shake;
     draw_frame();
-    double px = pos[0][0] - 0.085;
+    double px = plate_x;
+    /* the plate's shock absorbers, from its back to the corners of the stern face */
+    for (int i = 0; i < 3; i++) {
+        double from[3] = {px + 0.035, pos[i][1] * 0.82, pos[i][2] * 0.82};
+        strut(from, pos[i]);
+    }
     /* charges on their way out */
     for (int i = 0; i < NFLY; i++) if (fly[i] >= 0) {
         double f = (T - fly[i]) / FLIGHT;
