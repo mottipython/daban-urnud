@@ -50,30 +50,32 @@
     extern const unsigned char art_##name[], art_##name##_end[];
 ART(space, "space.jpg")
 ART(banner, "banner.png")
-ART(hull, "hull.png")
+ART(joint, "joint.png")
+ART(gravel, "gravel.jpg")
+ART(weight, "weight.png")
 ART(plate, "plate.png")
 ART(orb, "orb.png")
 ART(hub, "hub.png")
 ART(charge, "charge.png")
 ART(cyl, "cyl.png")
 ART(rod, "rod.png")
-ART(nozzle, "nozzle.png")
 ART(flash, "flash.jpg")
 ART(plasma, "plasma.jpg")
 ART(vapour, "vapour.jpg")
 
-enum { SP_SPACE, SP_BANNER, SP_HULL, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_NOZZLE, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
+enum { SP_SPACE, SP_BANNER, SP_JOINT, SP_GRAVEL, SP_WEIGHT, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
 static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } sprite[NSPRITE] = {
     {art_space, art_space_end},
     {art_banner, art_banner_end},
-    {art_hull, art_hull_end},
+    {art_joint, art_joint_end},
+    {art_gravel, art_gravel_end},
+    {art_weight, art_weight_end},
     {art_plate, art_plate_end},
     {art_orb, art_orb_end},
     {art_hub, art_hub_end},
     {art_charge, art_charge_end},
     {art_cyl, art_cyl_end},
     {art_rod, art_rod_end},
-    {art_nozzle, art_nozzle_end},
     {art_flash, art_flash_end},
     {art_plasma, art_plasma_end},
     {art_vapour, art_vapour_end},
@@ -113,7 +115,7 @@ static int opt_w = 1920, opt_h = 1200;
 /* ---- colours ---- */
 typedef struct { Uint8 r, g, b; } Rgb;
 static const Rgb BG = {6, 8, 16}, INK = {46, 32, 22}, CHORD = {130, 44, 30}, PAPER = {253, 246, 226};
-static const Rgb STEEL = {150, 152, 158}, DEEP = {22, 28, 46};
+static const Rgb STEEL = {150, 152, 158}, DEEP = {22, 28, 46}, WOODY = {96, 74, 56};
 
 /* ---- geometry buffer ---- */
 static SDL_Vertex *vb;
@@ -242,27 +244,36 @@ static void text(const char *str, double cx, double y, double s, double weight, 
 }
 /* ---- the ship ----
  *
- * Seen from the side, flying to the right. The pusher plate hangs behind the hull on
- * its shock absorbers. To change course the ship first turns, so that the plate is
- * behind the way it wants to go, and then lets propulsion charges out through the
- * middle of the plate one after another. Each bursts a little way behind; the plasma
- * hits the plate, the plate is driven in against the shock absorbers, and they pass
- * the blow on to the hull as a steady push.
+ * Seen from the side, flying to the right. The ship is an icosahedron whose thirty
+ * edges are shock absorbers, joined at its twelve corners, with a skin of gravel
+ * over them and the pusher plate on the corner at the stern. To change course it
+ * first turns, by running counterweights round tracks inside itself, so that the
+ * plate is behind the way it wants to go. Then it lets propulsion charges out
+ * through the middle of the plate one after another. Each bursts a little way
+ * behind; the plasma hits the plate, and the blow travels forward through the
+ * frame from strut to strut.
  *
- * Lengths are in hull-heights, in the ship's own frame: x forward, y down. */
+ * The frame is worked out as what it is: twelve masses and thirty damped springs.
+ * Lengths are in hull-heights, in the ship's own frame: x forward, y down, z
+ * towards us. */
 static double T, anim_t;
 static uint64_t seed_state;
 #define T_TURN 16.0     /* the ship starts to turn */
 #define T_BURN 32.0     /* first charge */
 #define T_COAST 72.0    /* last charge has gone */
 #define ROUND 96.0
-#define PLATE_X (-0.78) /* where the plate rests */
-#define BURST_X (-1.32) /* where a charge goes off */
+#define BLOW 1.25        /* what one blast does to the plate */
+#define BURST_X (-1.22) /* where a charge goes off */
 #define FLIGHT 0.55     /* seconds from the plate to there */
 static double ship_deg;           /* which way the ship points, degrees clockwise on screen */
 static double turn_to;            /* the heading this burn needs */
-static double plate_in, plate_v;  /* how far the plate is driven in, and how fast */
-static double hull_in, hull_v;    /* the hull, following on the far end of the shock absorbers */
+#define NV 12
+#define NE 30
+#define NF 20
+#define RADIUS 0.5
+static double pos[NV][3], vel[NV][3], rest[NV][3]; /* the corners; 0 is the stern, where the plate is */
+static int edge[NE][2], face[NF][3];
+static double edge_len;
 static double speed, travelled;   /* what the burn has added, for the stars to drift by */
 static double period;             /* seconds between charges */
 static double next_charge, last_burst = -100;
@@ -280,14 +291,64 @@ static double frand(void) { return (next_rand() >> 11) * (1.0 / 9007199254740992
 static double ramp(double t, double a, double b) { return t <= a ? 0 : t >= b ? 1 : (t - a) / (b - a); }
 static double ease(double x) { return x * x * (3 - 2 * x); }
 
+static void build_frame(void)
+{
+    double r = 2 * RADIUS / sqrt(5), x = RADIUS / sqrt(5), roll = M_PI / 2 + 0.07;
+    rest[0][0] = -RADIUS; rest[0][1] = rest[0][2] = 0;
+    rest[11][0] = RADIUS; rest[11][1] = rest[11][2] = 0;
+    for (int k = 0; k < 5; k++) {
+        double a = roll + k * 2 * M_PI / 5, b = a + M_PI / 5;
+        rest[1 + k][0] = -x; rest[1 + k][1] = r * cos(a); rest[1 + k][2] = r * sin(a);
+        rest[6 + k][0] = x; rest[6 + k][1] = r * cos(b); rest[6 + k][2] = r * sin(b);
+    }
+    edge_len = RADIUS / sin(2 * M_PI / 5);
+    int ne = 0, nf = 0;
+    static unsigned char joined[NV][NV];
+    for (int i = 0; i < NV; i++) for (int j = i + 1; j < NV; j++) {
+        double d = hypot(hypot(rest[i][0] - rest[j][0], rest[i][1] - rest[j][1]), rest[i][2] - rest[j][2]);
+        joined[i][j] = joined[j][i] = d < edge_len * 1.1;
+        if (joined[i][j] && ne < NE) { edge[ne][0] = i; edge[ne][1] = j; ne++; }
+    }
+    for (int i = 0; i < NV; i++) for (int j = i + 1; j < NV; j++) for (int k = j + 1; k < NV; k++)
+        if (joined[i][j] && joined[j][k] && joined[i][k] && nf < NF) { face[nf][0] = i; face[nf][1] = j; face[nf][2] = k; nf++; }
+}
+
 static void new_round(void)
 {
     T = 0;
-    ship_deg = 0; plate_in = plate_v = hull_in = hull_v = speed = travelled = 0;
+    ship_deg = 0; speed = travelled = 0;
+    if (edge_len == 0) build_frame();
+    memcpy(pos, rest, sizeof pos); memset(vel, 0, sizeof vel);
     turn_to = (frand() < 0.5 ? -1 : 1) * (14 + frand() * 22);
     period = 1.25 + frand() * 0.7;
     next_charge = T_BURN; last_burst = -100; charges = 0;
     for (int i = 0; i < NFLY; i++) fly[i] = -1;
+}
+
+static double mass(int i) { return i == 0 ? 3.0 : 1.0; } /* the stern corner carries the plate */
+
+/* the frame for a short moment h: every strut a spring with a damper in it */
+static void frame_step(double h)
+{
+    double f[NV][3] = {{0}}, com[3] = {0}, comv[3] = {0}, m = 0;
+    for (int e = 0; e < NE; e++) {
+        int a = edge[e][0], b = edge[e][1];
+        double d[3], len = 0, closing = 0;
+        for (int c = 0; c < 3; c++) { d[c] = pos[b][c] - pos[a][c]; len += d[c] * d[c]; }
+        len = sqrt(len);
+        for (int c = 0; c < 3; c++) { d[c] /= len; closing += (vel[b][c] - vel[a][c]) * d[c]; }
+        double push = 260 * (len - edge_len) + 9 * closing;
+        double short_by = edge_len * 0.86 - len; /* near the end of its travel a strut stiffens sharply */
+        if (short_by > 0) push -= 4000 * short_by;
+        for (int c = 0; c < 3; c++) { f[a][c] += push * d[c]; f[b][c] -= push * d[c]; }
+    }
+    for (int i = 0; i < NV; i++) for (int c = 0; c < 3; c++) { com[c] += mass(i) * pos[i][c]; comv[c] += mass(i) * vel[i][c]; }
+    for (int i = 0; i < NV; i++) m += mass(i);
+    for (int i = 0; i < NV; i++) for (int c = 0; c < 3; c++) {
+        /* we travel with the ship, so it eases back to the middle of the picture */
+        vel[i][c] += (f[i][c] / mass(i) - 5 * com[c] / m - 3.4 * comv[c] / m) * h;
+        pos[i][c] += vel[i][c] * h;
+    }
 }
 
 static void update(double dt)
@@ -303,15 +364,9 @@ static void update(double dt)
         next_charge += period;
     }
     for (int i = 0; i < NFLY; i++)
-        if (fly[i] >= 0 && T - fly[i] >= FLIGHT) { fly[i] = -1; last_burst = T; charges++; plate_v += 2.1; }
-    /* plate and hull on the shock absorbers: a stiff, well damped spring between them */
-    for (int k = 0; k < 4; k++) {
-        double h = dt / 4, squeeze = plate_in - hull_in;
-        plate_v += (-90 * squeeze - 9 * (plate_v - hull_v)) * h;
-        hull_v += (14 * squeeze + 1.4 * (plate_v - hull_v) - 5 * hull_in - 3.2 * hull_v) * h;
-        plate_in += plate_v * h; hull_in += hull_v * h;
-    }
-    if (plate_in < -0.02) { plate_in = -0.02; plate_v = 0; }
+        if (fly[i] >= 0 && T - fly[i] >= FLIGHT) { fly[i] = -1; last_burst = T; charges++; vel[0][0] += BLOW; }
+    int steps = (int)ceil(dt / 0.004);
+    for (int k = 0; k < steps; k++) frame_step(dt / steps);
     speed += ((T >= T_BURN && T < T_COAST + 1 ? 1.0 : 0.0) - speed) * fmin(1, dt * 0.4);
     travelled += speed * dt;
 }
@@ -347,14 +402,110 @@ static void turned(int which, double x, double y, double tall, double deg)
     SDL_RenderCopyExF(ren, cur_tex[which], NULL, &dst, deg, NULL, SDL_FLIP_NONE);
 }
 
+/* a strut from corner a to corner b: a rod fixed at a, sliding in a cylinder fixed at b */
+static void strut(const double *a, const double *b)
+{
+    double dx = b[0] - a[0], dy = b[1] - a[1], len = hypot(dx, dy), deg = atan2(dy, dx) * 180 / M_PI;
+    double seen = len / sqrt(dx * dx + dy * dy + (b[2] - a[2]) * (b[2] - a[2])); /* foreshortening */
+    double rl = edge_len * 0.6 * seen, cl = edge_len * 0.55 * seen, th = 0.05, ux = dx / len, uy = dy / len;
+    ship_pic_turned(SP_ROD, a[0] + ux * rl / 2, a[1] + uy * rl / 2, rl, th * 0.7, 1, deg);
+    ship_pic_turned(SP_CYL, b[0] - ux * cl / 2, b[1] - uy * cl / 2, cl, th, 1, deg);
+}
+
+static void draw_frame(void)
+{
+    int front[NF], vseen[NV] = {0}, best = -1;
+    double bestz = 0;
+    flush(ren);
+    /* the gravel skin: the faces that are turned towards us */
+    for (int f = 0; f < NF; f++) {
+        const double *a = pos[face[f][0]], *b = pos[face[f][1]], *c = pos[face[f][2]];
+        double u[3] = {b[0] - a[0], b[1] - a[1], b[2] - a[2]}, v[3] = {c[0] - a[0], c[1] - a[1], c[2] - a[2]};
+        double n[3] = {u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]};
+        double nl = sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+        if (n[0] * (a[0] + b[0] + c[0]) + n[1] * (a[1] + b[1] + c[1]) + n[2] * (a[2] + b[2] + c[2]) < 0) { n[0] = -n[0]; n[1] = -n[1]; n[2] = -n[2]; }
+        for (int k = 0; k < 3; k++) n[k] /= nl;
+        front[f] = n[2] > 0.03;
+        if (!front[f]) continue;
+        if (n[2] > bestz) { bestz = n[2]; best = f; }
+        /* lit from above and ahead, in the ship's own frame turned to the screen */
+        double lx = n[0] * sc - n[1] * ss, ly = n[0] * ss + n[1] * sc;
+        double lit = 0.62 + 0.3 * n[2] + 0.22 * (-ly * 0.8 + lx * 0.3);
+        Uint8 g = (Uint8)(255 * fmin(1, fmax(0.25, lit)));
+        static const float UV[3][2] = {{0.05f, 0.08f}, {0.85f, 0.08f}, {0.45f, 0.78f}};
+        SDL_Vertex tri[3];
+        for (int k = 0; k < 3; k++) {
+            double x, y;
+            ship_pt(pos[face[f][k]][0], pos[face[f][k]][1], &x, &y);
+            tri[k].position.x = (float)x; tri[k].position.y = (float)y;
+            tri[k].color = (SDL_Color){g, g, g, 255};
+            tri[k].tex_coord.x = UV[k][0]; tri[k].tex_coord.y = UV[k][1];
+            vseen[face[f][k]] = 1;
+        }
+        if (cur_tex && cur_tex[SP_GRAVEL]) SDL_RenderGeometry(ren, cur_tex[SP_GRAVEL], tri, 3, NULL, 0);
+    }
+    /* the Adrakhonic theorem, painted on the face that looks straight at us */
+    if (best >= 0) {
+        double cx = 0, cy = 0, x, y, q = 0.021;
+        for (int k = 0; k < 3; k++) { cx += pos[face[best][k]][0] / 3; cy += pos[face[best][k]][1] / 3; }
+        static const double D[][4] = { /* a 3-4-5 triangle and the square on each side */
+            {0, 0, 4, 0}, {4, 0, 4, -3}, {4, -3, 0, 0},
+            {0, 0, 0, 4}, {0, 4, 4, 4}, {4, 4, 4, 0},
+            {4, 0, 7, 0}, {7, 0, 7, -3}, {7, -3, 4, -3},
+            {0, 0, -3, -4}, {-3, -4, 1, -7}, {1, -7, 4, -3}};
+        SDL_Color white = col(PAPER, 0.8);
+        for (unsigned k = 0; k < sizeof D / sizeof D[0]; k++) {
+            double x1, y1;
+            ship_pt(cx + (D[k][0] - 2.4) * q, cy + (D[k][1] + 0.6) * q, &x, &y);
+            ship_pt(cx + (D[k][2] - 2.4) * q, cy + (D[k][3] + 0.6) * q, &x1, &y1);
+            line(x, y, x1, y1, sH * 0.006, white);
+        }
+        flush(ren);
+    }
+    /* the struts along the edges of those faces, then the joints at the corners */
+    for (int e = 0; e < NE; e++) {
+        int seen = 0;
+        for (int f = 0; f < NF && !seen; f++) if (front[f]) {
+            int has = 0;
+            for (int k = 0; k < 3; k++) has += face[f][k] == edge[e][0] || face[f][k] == edge[e][1];
+            seen = has == 2;
+        }
+        if (seen) strut(pos[edge[e][0]], pos[edge[e][1]]);
+    }
+    for (int i = 0; i < NV; i++)
+        if (vseen[i]) ship_pic_turned(SP_JOINT, pos[i][0], pos[i][1], wide(SP_JOINT, 0.125), 0.125, 1, i * 37.0);
+}
+
+/* The tracks, in a round window: counterweights run round one way and the ship
+ * turns the other. They stop, and so does it. */
+static void draw_tracks(double cx, double cy, double R)
+{
+    disc(cx, cy, R * 1.06, col(STEEL, 1), col(STEEL, 1));
+    disc(cx, cy, R, col(DEEP, 1), col(BG, 1));
+    double tr = R * 0.68, a0 = -ship_deg * M_PI / 180 * 9;
+    for (int k = 0; k < 48; k++) { /* sleepers */
+        double a = k * M_PI / 24;
+        line(cx + cos(a) * tr * 0.88, cy + sin(a) * tr * 0.88, cx + cos(a) * tr * 1.12, cy + sin(a) * tr * 1.12, R * 0.022, col(WOODY, 1));
+    }
+    ring(cx, cy, tr * 0.93, R * 0.028, col(STEEL, 1));
+    ring(cx, cy, tr * 1.07, R * 0.028, col(STEEL, 1));
+    flush(ren);
+    for (int i = 0; i < 3; i++) {
+        double a = a0 + i * 2 * M_PI / 3;
+        turned(SP_WEIGHT, cx + cos(a) * tr * 0.9, cy + sin(a) * tr * 0.9, R * 0.3, a * 180 / M_PI + 180);
+    }
+    ring(cx, cy, R * 1.03, R * 0.07, col(INK, 0.9));
+    flush(ren);
+}
+
 static void caption(const char **l1, const char **l2)
 {
     static char count[64];
     *l1 = "THE DABAN URNUD"; *l2 = "THE GEOMETERS' SHIP, IN ORBIT ABOUT ARBRE";
-    if (T > 8) { *l1 = "SIXTEEN ORBS TURN ABOUT THE CORE"; *l2 = "FOUR FOR EACH RACE: URNUD, TRO, LATERRE AND FTHOS"; }
-    if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "FIRST THE SHIP TURNS, TO PUT ITS PLATE BEHIND IT"; }
+    if (T > 8) { *l1 = "INSIDE, SIXTEEN ORBS TURN ABOUT THE CORE"; *l2 = "FOUR FOR EACH RACE: URNUD, TRO, LATERRE AND FTHOS"; }
+    if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "COUNTERWEIGHTS RUN ROUND TRACKS INSIDE, AND THE SHIP TURNS THE OTHER WAY"; }
     if (T >= T_BURN - 3) { *l1 = "PROPULSION CHARGES"; *l2 = "ATOMIC BOMBS, LET OUT THROUGH THE PLATE ONE BY ONE"; }
-    if (T >= T_BURN + 12) { *l1 = "THE PLATE TAKES THE BLAST"; *l2 = "AND THE SHOCK ABSORBERS TURN EACH BLOW INTO A PUSH"; }
+    if (T >= T_BURN + 12) { *l1 = "THIRTY STRUTS, EVERY ONE A SHOCK ABSORBER"; *l2 = "THE BLOW RUNS FORWARD THROUGH THE WHOLE FRAME"; }
     if (T >= T_BURN + 26) {
         snprintf(count, sizeof count, "%d CHARGES SO FAR", charges);
         *l1 = "SEEN FROM ARBRE: A STRING OF SPARKS"; *l2 = count;
@@ -413,39 +564,17 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     double shake = glare * glare * unit * 0.5;
     sH = h * 0.42; sc = cos(ship_deg * M_PI / 180); ss = sin(ship_deg * M_PI / 180);
     sx0 = w * 0.56 + sin(anim_t * 47) * shake; sy0 = h * 0.42 + cos(anim_t * 53) * shake;
-    double px = PLATE_X + plate_in, hx = hull_in;
-
-    /* shock absorbers: each rod is fixed to the back of the plate and slides in and
-     * out of a cylinder fixed to the hull */
-    for (int k = -1; k <= 1; k++) {
-        double x0 = px + 0.045, x1 = hx - 0.30, y = k * 0.19, rl = 0.27, cl = 0.2;
-        ship_pic(SP_ROD, x0 + rl / 2, y, rl, rl * sprite[SP_ROD].h / sprite[SP_ROD].w, 1);
-        ship_pic(SP_CYL, x1 - cl / 2, y, cl, cl * sprite[SP_CYL].h / sprite[SP_CYL].w, 1);
-    }
-    /* the hull's own frame gives a little under each blow */
-    double give = fmin(0.035, fmax(0, (plate_in - hull_in) * 0.3));
-    ship_pic(SP_HULL, hx - give * 0.3, 0, wide(SP_HULL, 1) * (1 - give), 1 + give * 0.5, 1);
-    /* thrusters, in two pairs: one pair starts the turn and the other stops it */
-    static const double NOZ[4][3] = {{0.23, -0.35, 30}, {-0.23, 0.35, 210}, {0.23, 0.35, 150}, {-0.23, -0.35, -30}}; /* where, and which way the bell points */
-    double tf = ramp(T, T_TURN, T_BURN - 3), firing = tf > 0.02 && tf < 0.3 ? 1 : tf > 0.7 && tf < 0.98 ? -1 : 0;
-    for (int i = 0; i < 4; i++) {
-        double na = NOZ[i][2] * M_PI / 180, ox = sin(na), oy = -cos(na);
-        int pair = i < 2 ? 1 : -1; /* the first pair turns it clockwise */
-        if (firing * (turn_to > 0 ? 1 : -1) * pair > 0) {
-            double fl = 0.2 + 0.06 * sin(anim_t * 61 + i);
-            ship_pic_turned(SP_FLASH, NOZ[i][0] + ox * 0.15, NOZ[i][1] + oy * 0.15, fl * 0.5, fl * 1.5, 0.9, NOZ[i][2]);
-        }
-        ship_pic_turned(SP_NOZZLE, NOZ[i][0] + ox * 0.02, NOZ[i][1] + oy * 0.02, wide(SP_NOZZLE, 0.1), 0.1, 1, NOZ[i][2]);
-    }
+    draw_frame();
+    double px = pos[0][0] - 0.085;
     /* charges on their way out */
     for (int i = 0; i < NFLY; i++) if (fly[i] >= 0) {
         double f = (T - fly[i]) / FLIGHT;
         ship_pic(SP_CHARGE, px - 0.05 + (BURST_X - px) * f, 0, wide(SP_CHARGE, 0.06), 0.06, 1);
     }
-    double ph0 = 0.7, face = px - wide(SP_PLATE, ph0) * 0.42; /* the burnt face of the plate */
+    double ph0 = 0.62, face = px - wide(SP_PLATE, ph0) * 0.42; /* the burnt face of the plate */
     /* the plasma against the plate, then the plate over it */
     if (since >= 0 && since < 0.9) {
-        double f = since / 0.9, ph = 0.7 + 0.5 * f, pw = wide(SP_PLASMA, ph) * (0.75 + 0.4 * f);
+        double f = since / 0.9, ph = 0.62 + 0.5 * f, pw = wide(SP_PLASMA, ph) * (0.75 + 0.4 * f);
         ship_pic(SP_PLASMA, face + 0.04 - pw / 2, 0, pw, ph, (1 - f) * (1 - f) * 1.3);
     }
     ship_pic(SP_PLATE, px, 0, wide(SP_PLATE, ph0), ph0, 1);
@@ -465,6 +594,12 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
         double R = h * 0.15 * grow, cx = w * 0.115, cy = h * 0.22;
         draw_core(cx, cy, R);
         if (grow > 0.9) text("LOOKING ALONG THE CORE", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
+    }
+    double tg = ease(ramp(T, T_TURN - 2, T_TURN)) * (1 - ease(ramp(T, T_BURN - 2, T_BURN)));
+    if (tg > 0.01) {
+        double R = h * 0.15 * tg, cx = w * 0.115, cy = h * 0.6;
+        draw_tracks(cx, cy, R);
+        if (tg > 0.9) text("THE TRACKS", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
     }
     const char *l1, *l2;
     caption(&l1, &l2);

@@ -15,7 +15,7 @@ import numpy as np
 
 SRC, OUT = "assets/src", "assets/art"
 ROWS = 2
-PARTS = [("hull", 900), (None, 0), ("orb", 300), ("hub", 300), ("charge", 120), ("cyl", 110), ("rod", 80), ("nozzle", 200)]  # name, pixels tall
+PARTS = [(None, 0), (None, 0), ("orb", 300), ("hub", 300), ("charge", 120), ("cyl", 110), ("rod", 80), (None, 0)]  # name, pixels tall
 
 def load(path):
     w, h = map(int, subprocess.check_output(["magick", "identify", "-format", "%w %h", path]).split())
@@ -79,6 +79,17 @@ def main():
     p = trim(key(load(f"{SRC}/plate.jpeg")))
     save(p, round(p.shape[1] * 700 / p.shape[0]), 700, f"{OUT}/plate.png")
     print("plate")
+    # the frame: the joint at each corner, and the gravel skin as a square of texture
+    got = pieces(key(load(f"{SRC}/frame.jpeg")), 1)
+    j = trim(got[0])
+    save(j, round(j.shape[1] * 260 / j.shape[0]), 260, f"{OUT}/joint.png")
+    g = trim(got[1]); n = min(g.shape[:2]); m = n // 6
+    g = g[m:n - m, m:n - m, :3]
+    subprocess.run(["magick", "-size", f"{g.shape[1]}x{g.shape[0]}", "-depth", "8", "RGB:-", "-resize", "512x512!",
+                    "-brightness-contrast", "12x-6", "-quality", "90", f"{OUT}/gravel.jpg"], input=np.ascontiguousarray(g).tobytes(), check=True)
+    if len(got) > 2:
+        c = trim(got[2]); save(c, round(c.shape[1] * 200 / c.shape[0]), 200, f"{OUT}/weight.png")
+    print("joint, gravel")
     # the blasts: split where the picture is dark all the way down
     img = load(f"{SRC}/blasts.jpeg")
     lit = img.max(axis=2).max(axis=0) > 40

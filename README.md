@@ -11,9 +11,10 @@ The Daban Urnud is the starship that turns up in orbit about Arbre: an icosahedr
 with sixteen orbs inside it, four for each of the four races aboard (Urnud, Tro,
 Laterre and Fthos), going round a central Core so that the people living in them
 have weight. It is driven by atomic bombs. Propulsion charges are let out behind
-it and set off, the blast strikes a pusher plate, and shock absorbers between the
-plate and the ship turn each blow into a push. On its hull is a proof of the
-Adrakhonic theorem.
+it and set off, and the blast strikes a pusher plate at the stern. The thirty
+edges of the icosahedron are shock absorbers, so the whole frame takes the blow.
+Its skin is gravel, for shielding. On its hull is a proof of the Adrakhonic
+theorem.
 
 ## What the screensaver shows
 
@@ -21,38 +22,39 @@ One change of course, about a minute and a half, then another at a different ang
 
 - **In orbit.** The ship coasts over Arbre. A round window looks along the Core at
   one ring of four orbs going round; they never stop.
-- **The turn.** Thrusters swing the whole ship round to put the plate behind its
-  new course, and a second pair stops it there.
+- **The turn.** No thrusters. A second window shows counterweights running round
+  tracks inside the ship; the ship turns the other way, and stops when they stop.
 - **The burn.** A charge drops out through the plate every second or two, flies a
-  little way aft and goes off. The plasma hits the plate. The plate's ablative
-  layer glows and boils off. The plate is driven in, its rods sliding into the
-  cylinders of the shock absorbers, and the hull follows more gently as they push
-  back out. The stars begin to slide by.
+  little way aft and goes off. The plasma hits the plate, and the plate's ablative
+  layer glows and boils off. The stern corner is driven in, its five struts
+  shorten, rods sliding into cylinders, and the squeeze runs forward through the
+  frame to the bow. The stars begin to slide by.
 - **The new course.** The burn ends and the ship coasts again.
 
-The plate and hull really are two masses on a damped spring, so the shock absorbers
-move as the blasts drive them, not on a fixed loop.
+The frame is computed as what it is: twelve masses joined by thirty damped
+springs. Nothing about how it flexes is a canned animation.
 
 | | |
 |---|---|
 | ![](docs/screenshots/02-the-orbs.jpg) | ![](docs/screenshots/03-the-turn.jpg) |
-| The orbs, seen along the Core | Thrusters turning the ship |
-| ![](docs/screenshots/04-charge-away.jpg) | ![](docs/screenshots/06-the-plate-takes-it.jpg) |
-| A charge on its way out | The plate takes the blast |
+| The orbs, seen along the Core | Counterweights turning the ship |
+| ![](docs/screenshots/04-charge-away.jpg) | ![](docs/screenshots/06-the-frame-takes-it.jpg) |
+| A charge on its way out | The frame takes the blast |
 
 ### What is from the book and what is mine
 
-I worked from memory of the book and what is written about it, not from the text, so
-treat this as a fan's picture and not a reference.
+I worked from memory of the book and from what readers told me, not from the text,
+so treat this as a fan's picture and not a reference.
 
-From the book, as far as I know: the icosahedron, the sixteen orbs in four groups
-turning about the Core, the four races, propulsion by atomic charges against a
-pusher plate with shock absorbers, the Adrakhonic theorem on the hull, and the burn
+From the book, as far as I know: the icosahedron whose struts are shock absorbers,
+the gravel skin, the sixteen orbs in four groups turning about the Core, the four
+races, propulsion by atomic charges against a pusher plate, turning by
+counterweights on internal tracks, the Adrakhonic theorem on the hull, and the burn
 being seen from Arbre as a string of sparks.
 
-Mine: how it all looks from the side, the number and place of the shock absorbers,
-the thrusters, the ablative layer on the plate (usual for this kind of drive), the
-timing, and showing the plate hanging behind the hull where you can see it work.
+Mine: how it all looks from the side, the plate sitting on one corner, the ablative
+layer on the plate (usual for this kind of drive), what the tracks and
+counterweights look like, how stiff the frame is, and the timing.
 
 ## Install
 
@@ -124,7 +126,7 @@ everything they need:
 MIT. *Anathem* and the Daban Urnud are Neal Stephenson's; this is an unofficial fan
 project.
 
-The pictures (the hull, the plate, the orb, the hub, the charge, the shock absorber,
-the thruster, the blasts, Arbre and the scroll) were drawn with Google Gemini and
+The pictures (the plate, the joints, the gravel, the struts, the orb, the hub, the charge,
+the blasts, Arbre and the scroll) were drawn with Google Gemini and
 prepared by `tools/make_sprites.py`. Images are decoded with
 [stb_image](https://github.com/nothings/stb) (public domain).
