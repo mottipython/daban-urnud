@@ -539,7 +539,8 @@ static void draw_core(double cx, double cy, double R)
     }
     for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] <= 0) /* the far struts, behind everything */
         line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.02, col(STEEL, 0.4));
-    /* the Core, from the corner at the stern to the corner at the bow */
+    /* the Core, from the corner at the stern to the corner at the bow; the orbs are
+     * all round it, so they are drawn over it */
     line(fx[0], fy[0], fx[11], fy[11], R * 0.1, col(INK, 1));
     line(fx[0], fy[0], fx[11], fy[11], R * 0.07, col(STEEL, 1));
     flush(ren);
@@ -547,10 +548,6 @@ static void draw_core(double cx, double cy, double R)
         double size = 1 + 0.12 * o[n].z / (2 * gap);
         turned(SP_ORB, o[n].x, o[n].y, 2 * rho * size, o[n].deg);
     }
-    /* the near end of the Core, coming out of the stack towards us */
-    double nx = cx + ax * 1.6 * gap, ny = cy + ay * 1.6 * gap;
-    line(nx, ny, fx[11], fy[11], R * 0.1, col(INK, 1));
-    line(nx, ny, fx[11], fy[11], R * 0.07, col(STEEL, 1));
     for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] > 0) { /* the near struts, over the orbs */
         line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.034, col(INK, 0.85));
         line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.018, col(STEEL, 1));
