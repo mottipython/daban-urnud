@@ -478,7 +478,7 @@ static void caption(const char **l1, const char **l2)
 {
     static char count[64];
     *l1 = "THE DABAN URNUD"; *l2 = "THE GEOMETERS' SHIP, IN ORBIT ABOUT ARBRE";
-    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "SIXTEEN ORBS, FOUR FOR EACH RACE: URNUD, TRO, LATERRE AND FTHOS"; }
+    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "FOUR LEVELS OF FOUR ORBS, EACH NESTED IN THE HOLLOWS OF THE LAST"; }
     if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "NO THRUSTERS: COUNTERWEIGHTS ON TRACKS INSIDE SWING IT ROUND"; }
     if (T >= T_BURN - 3) { *l1 = "PROPULSION CHARGES"; *l2 = "ATOMIC BOMBS, LET OUT THROUGH THE PLATE ONE BY ONE"; }
     if (T >= T_BURN + 12) { *l1 = "THIRTY STRUTS, EVERY ONE A SHOCK ABSORBER"; *l2 = "THE BLOW RUNS FORWARD THROUGH THE WHOLE FRAME"; }
@@ -504,44 +504,42 @@ static void draw_caption(int w, int h, const char *l1, const char *l2)
     text(l2, w / 2.0, by + bh * 0.25 + s1 * 6 + unit * 1.2, s2, 0.9, col(CHORD, 1));
 }
 
-/* The Core in a round window, seen a little from one side so that the stacks show:
- * four rings of four orbs, one ring behind another along the Core, all going
- * round together. */
+/* The orbstacks in a round window, seen a little from one side: four levels of
+ * four orbs about the Core. The four in a level touch, and each level is turned an
+ * eighth of a turn from the last, so that its orbs nest in the hollows between
+ * the ones behind. They all go round together. */
 static void draw_core(double cx, double cy, double R)
 {
     disc(cx, cy, R * 1.06, col(STEEL, 1), col(STEEL, 1));
     disc(cx, cy, R, col(DEEP, 1), col(BG, 1));
     /* the Core points out of the picture, down and to the right; z is towards us */
-    double tilt = 0.66, ax = sin(tilt) * 0.82, ay = sin(tilt) * 0.57, az = cos(tilt);
+    double tilt = 1.05, ax = sin(tilt) * 0.82, ay = sin(tilt) * 0.57, az = cos(tilt);
     double ux = -0.57, uy = 0.82;                              /* across the Core, flat on the screen */
-    double vx = ay * 0 - az * uy, vy = az * ux - ax * 0, vz = ax * uy - ay * ux; /* and the other way across */
-    double reach = R * 0.44, gap = R * 0.37, orb = R * 0.25;
-    for (int k = 0; k < 4; k++) { /* the farthest ring first */
-        double along = (k - 1.5) * gap, hx = cx + ax * along, hy = cy + ay * along;
-        double nx = cx + ax * (along + gap), ny = cy + ay * (along + gap), size = 1 + 0.1 * (k - 1.5);
-        struct { double x, y, z, deg; } o[4];
-        for (int i = 0; i < 4; i++) {
-            double a = spin + i * M_PI / 2, c = cos(a), sn = sin(a);
-            o[i].x = hx + (ux * c + vx * sn) * reach; o[i].y = hy + (uy * c + vy * sn) * reach; o[i].z = vz * sn;
-            o[i].deg = atan2(o[i].y - hy, o[i].x - hx) * 180 / M_PI + 90;
-        }
-        for (int i = 0; i < 4; i++) for (int j = i + 1; j < 4; j++) /* far side of the ring first */
-            if (o[j].z < o[i].z) { double t[4] = {o[i].x, o[i].y, o[i].z, o[i].deg}; o[i] = o[j]; o[j].x = t[0]; o[j].y = t[1]; o[j].z = t[2]; o[j].deg = t[3]; }
-        for (int half = 0; half < 2; half++) {
-            for (int i = half * 2; i < half * 2 + 2; i++) {
-                line(hx, hy, o[i].x, o[i].y, R * 0.05 * size, col(INK, 1));
-                line(hx, hy, o[i].x, o[i].y, R * 0.028 * size, col(STEEL, 1));
-                flush(ren);
-                turned(SP_ORB, o[i].x, o[i].y, orb * size, o[i].deg);
-            }
-            if (half == 0 && k < 3) { /* the Core itself, on to the next ring, between the far orbs and the near */
-                line(hx, hy, nx, ny, R * 0.085, col(INK, 1));
-                line(hx, hy, nx, ny, R * 0.055, col(STEEL, 1));
-            }
-        }
-        disc(hx, hy, R * 0.06 * size, col(INK, 1), col(INK, 1));
-        disc(hx, hy, R * 0.042 * size, col(STEEL, 1), col(STEEL, 1));
+    double vx = -az * uy, vy = az * ux, vz = ax * uy - ay * ux; /* and the other way across */
+    double rho = R * 0.18, reach = rho * 1.4142, gap = rho * 1.682; /* touching in the ring, and nested level on level */
+    struct { double x, y, z, hx, hy, deg; } o[16], t;
+    for (int k = 0; k < 4; k++) for (int i = 0; i < 4; i++) {
+        double along = (k - 1.5) * gap, a = spin + i * M_PI / 2 + k * M_PI / 4, c = cos(a), sn = sin(a);
+        int n = k * 4 + i;
+        o[n].hx = cx + ax * along; o[n].hy = cy + ay * along;
+        o[n].x = o[n].hx + (ux * c + vx * sn) * reach; o[n].y = o[n].hy + (uy * c + vy * sn) * reach;
+        o[n].z = az * along + vz * sn * reach;
+        o[n].deg = atan2(o[n].y - o[n].hy, o[n].x - o[n].hx) * 180 / M_PI + 90;
     }
+    for (int i = 0; i < 16; i++) for (int j = i + 1; j < 16; j++) if (o[j].z < o[i].z) { t = o[i]; o[i] = o[j]; o[j] = t; }
+    double e0 = -2.1 * gap, e1 = 2.1 * gap;
+    line(cx + ax * e0, cy + ay * e0, cx + ax * e1, cy + ay * e1, R * 0.085, col(INK, 1));
+    line(cx + ax * e0, cy + ay * e0, cx + ax * e1, cy + ay * e1, R * 0.055, col(STEEL, 1));
+    flush(ren);
+    for (int n = 0; n < 16; n++) {
+        double size = 1 + 0.12 * o[n].z / (2 * gap);
+        turned(SP_ORB, o[n].x, o[n].y, 2 * rho * size, o[n].deg);
+    }
+    /* the near end of the Core, standing out in front of the nearest level */
+    line(cx + ax * 1.2 * gap, cy + ay * 1.2 * gap, cx + ax * e1, cy + ay * e1, R * 0.085, col(INK, 1));
+    line(cx + ax * 1.2 * gap, cy + ay * 1.2 * gap, cx + ax * e1, cy + ay * e1, R * 0.055, col(STEEL, 1));
+    disc(cx + ax * e1, cy + ay * e1, R * 0.05, col(INK, 1), col(INK, 1));
+    disc(cx + ax * e1, cy + ay * e1, R * 0.034, col(STEEL, 1), col(STEEL, 1));
     ring(cx, cy, R * 1.03, R * 0.07, col(INK, 0.9));
     flush(ren);
 }
@@ -552,10 +550,18 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     unit = (w < h ? w : h) * 0.0125;
     SDL_SetRenderDrawColor(r, BG.r, BG.g, BG.b, 255);
     SDL_RenderClear(r);
-    /* space, a little larger than the screen, sliding back as the ship gathers way */
-    double over = 0.12, drift = 1 - exp(-travelled * 0.035), a0 = turn_to * M_PI / 180;
-    double bx = -w * over / 2 - cos(a0) * drift * w * over * 0.45, by = -h * over / 2 - sin(a0) * drift * h * over * 0.45;
-    pic_part(SP_SPACE, bx + sin(anim_t * 0.05) * unit, by, w * (1 + over), h * (1 + over), 0, 1, 0, 0);
+    /* Arbre goes by underneath. The picture is turned slowly about the middle of the
+     * planet, far below the screen, so the ground slides back under the ship while
+     * the horizon stays where it is; the burn hurries it. It is drawn large enough
+     * to cover the screen however far it has turned. */
+    {
+        const double CX = 0.4966, CY = 1.3475, RAD = 0.9555, BIG = 1.6; /* the planet in the picture, in picture-widths */
+        double deg = 7.5 - 15.0 * T / ROUND - 1.5 * (1 - exp(-travelled * 0.05));
+        double pw = BIG * w, phh = pw * sprite[SP_SPACE].h / sprite[SP_SPACE].w;
+        SDL_FRect dst = {(float)(w * 0.5 - CX * pw), (float)(h * 0.74 + RAD * pw - CY * pw), (float)pw, (float)phh};
+        SDL_FPoint pivot = {(float)(CX * pw), (float)(CY * pw)};
+        if (cur_tex && cur_tex[SP_SPACE]) SDL_RenderCopyExF(r, cur_tex[SP_SPACE], NULL, &dst, deg, &pivot, SDL_FLIP_NONE);
+    }
 
     double since = T - last_burst, glare = since >= 0 && since < 0.5 ? 1 - since / 0.5 : 0;
     double shake = glare * glare * unit * 0.5;

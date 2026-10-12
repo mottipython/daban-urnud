@@ -106,7 +106,7 @@ def main():
         subprocess.run(["magick", "-size", f"{part.shape[1]}x{part.shape[0]}", "-depth", "8", "RGB:-", "-resize", "600x600>",
                         "-quality", "92", f"{OUT}/{name}.jpg"], input=np.ascontiguousarray(part).tobytes(), check=True)
         print(name, part.shape[1], part.shape[0])
-    subprocess.run(["magick", f"{SRC}/space.jpeg", "-resize", "2200x1238!", "-quality", "90", f"{OUT}/space.jpg"], check=True)
+    subprocess.run(["magick", f"{SRC}/space.jpeg", "-resize", "2752x1536!", "-quality", "86", f"{OUT}/space.jpg"], check=True)
     print("space")
 
 if __name__ == "__main__":
