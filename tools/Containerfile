@@ -1,0 +1,6 @@
+# Everything needed to build the Linux packages and the Windows installer.
+#   podman build -t anathem-build -f tools/Containerfile tools
+#   podman run --rm --security-opt label=disable -v "$PWD":/src -w /src anathem-build make dist
+FROM registry.fedoraproject.org/fedora:44
+RUN dnf install -y make gcc git rpm-build dpkg SDL2-devel mingw64-gcc mingw64-SDL2 mingw32-nsis mingw64-binutils ImageMagick && dnf clean all
+RUN git config --system --add safe.directory '*'
