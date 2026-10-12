@@ -55,11 +55,14 @@ ART(plate, "plate.png")
 ART(orb, "orb.png")
 ART(hub, "hub.png")
 ART(charge, "charge.png")
-ART(shock, "shock.png")
+ART(cyl, "cyl.png")
+ART(rod, "rod.png")
+ART(nozzle, "nozzle.png")
 ART(flash, "flash.jpg")
 ART(plasma, "plasma.jpg")
+ART(vapour, "vapour.jpg")
 
-enum { SP_SPACE, SP_BANNER, SP_HULL, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_SHOCK, SP_FLASH, SP_PLASMA, NSPRITE };
+enum { SP_SPACE, SP_BANNER, SP_HULL, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_NOZZLE, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
 static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } sprite[NSPRITE] = {
     {art_space, art_space_end},
     {art_banner, art_banner_end},
@@ -68,9 +71,12 @@ static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } 
     {art_orb, art_orb_end},
     {art_hub, art_hub_end},
     {art_charge, art_charge_end},
-    {art_shock, art_shock_end},
+    {art_cyl, art_cyl_end},
+    {art_rod, art_rod_end},
+    {art_nozzle, art_nozzle_end},
     {art_flash, art_flash_end},
     {art_plasma, art_plasma_end},
+    {art_vapour, art_vapour_end},
 };
 static SDL_Texture **cur_tex; /* the pictures, for the renderer being drawn to */
 
@@ -92,7 +98,7 @@ static void make_textures(SDL_Renderer *r, SDL_Texture **tex)
         if (!tex[i]) continue;
         SDL_UpdateTexture(tex[i], NULL, sprite[i].px, sprite[i].w * 4);
         /* the blasts are light painted on black, and are added to what is behind them */
-        SDL_SetTextureBlendMode(tex[i], i == SP_FLASH || i == SP_PLASMA ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
+        SDL_SetTextureBlendMode(tex[i], i >= SP_FLASH ? SDL_BLENDMODE_ADD : SDL_BLENDMODE_BLEND);
     }
 }
 
@@ -250,8 +256,8 @@ static uint64_t seed_state;
 #define T_BURN 32.0     /* first charge */
 #define T_COAST 72.0    /* last charge has gone */
 #define ROUND 96.0
-#define PLATE_X (-0.70) /* where the plate rests */
-#define BURST_X (-1.22) /* where a charge goes off */
+#define PLATE_X (-0.78) /* where the plate rests */
+#define BURST_X (-1.32) /* where a charge goes off */
 #define FLIGHT 0.55     /* seconds from the plate to there */
 static double ship_deg;           /* which way the ship points, degrees clockwise on screen */
 static double turn_to;            /* the heading this burn needs */
@@ -297,7 +303,7 @@ static void update(double dt)
         next_charge += period;
     }
     for (int i = 0; i < NFLY; i++)
-        if (fly[i] >= 0 && T - fly[i] >= FLIGHT) { fly[i] = -1; last_burst = T; charges++; plate_v += 2.6; }
+        if (fly[i] >= 0 && T - fly[i] >= FLIGHT) { fly[i] = -1; last_burst = T; charges++; plate_v += 2.1; }
     /* plate and hull on the shock absorbers: a stiff, well damped spring between them */
     for (int k = 0; k < 4; k++) {
         double h = dt / 4, squeeze = plate_in - hull_in;
@@ -317,8 +323,9 @@ static void ship_pt(double lx, double ly, double *x, double *y)
 {
     *x = sx0 + (lx * sc - ly * ss) * sH; *y = sy0 + (lx * ss + ly * sc) * sH;
 }
-/* a picture w by h (hull-heights) with its centre at (lx, ly) in the ship's frame */
-static void ship_pic(int which, double lx, double ly, double w, double h, double alpha)
+/* a picture w by h (hull-heights) with its centre at (lx, ly) in the ship's frame,
+ * turned a further `more` degrees */
+static void ship_pic_turned(int which, double lx, double ly, double w, double h, double alpha, double more)
 {
     flush(ren);
     if (!cur_tex || !cur_tex[which] || alpha <= 0) return;
@@ -326,9 +333,10 @@ static void ship_pic(int which, double lx, double ly, double w, double h, double
     ship_pt(lx, ly, &x, &y);
     SDL_FRect dst = {(float)(x - w * sH / 2), (float)(y - h * sH / 2), (float)(w * sH), (float)(h * sH)};
     SDL_SetTextureAlphaMod(cur_tex[which], (Uint8)(fmin(alpha, 1) * 255));
-    SDL_RenderCopyExF(ren, cur_tex[which], NULL, &dst, ship_deg, NULL, SDL_FLIP_NONE);
+    SDL_RenderCopyExF(ren, cur_tex[which], NULL, &dst, ship_deg + more, NULL, SDL_FLIP_NONE);
     SDL_SetTextureAlphaMod(cur_tex[which], 255);
 }
+static void ship_pic(int which, double lx, double ly, double w, double h, double alpha) { ship_pic_turned(which, lx, ly, w, h, alpha, 0); }
 static double wide(int which, double h) { return h * sprite[which].w / sprite[which].h; }
 static void turned(int which, double x, double y, double tall, double deg)
 {
@@ -407,28 +415,50 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     sx0 = w * 0.56 + sin(anim_t * 47) * shake; sy0 = h * 0.42 + cos(anim_t * 53) * shake;
     double px = PLATE_X + plate_in, hx = hull_in;
 
-    /* shock absorbers, from the back of the plate to the hull */
+    /* shock absorbers: each rod is fixed to the back of the plate and slides in and
+     * out of a cylinder fixed to the hull */
     for (int k = -1; k <= 1; k++) {
-        double x0 = px + 0.03, x1 = hx - 0.34, y = k * 0.17;
-        ship_pic(SP_SHOCK, (x0 + x1) / 2, y, x1 - x0, 0.075, 1);
+        double x0 = px + 0.045, x1 = hx - 0.30, y = k * 0.19, rl = 0.27, cl = 0.2;
+        ship_pic(SP_ROD, x0 + rl / 2, y, rl, rl * sprite[SP_ROD].h / sprite[SP_ROD].w, 1);
+        ship_pic(SP_CYL, x1 - cl / 2, y, cl, cl * sprite[SP_CYL].h / sprite[SP_CYL].w, 1);
     }
-    ship_pic(SP_HULL, hx, 0, wide(SP_HULL, 1), 1, 1);
+    /* the hull's own frame gives a little under each blow */
+    double give = fmin(0.035, fmax(0, (plate_in - hull_in) * 0.3));
+    ship_pic(SP_HULL, hx - give * 0.3, 0, wide(SP_HULL, 1) * (1 - give), 1 + give * 0.5, 1);
+    /* thrusters, in two pairs: one pair starts the turn and the other stops it */
+    static const double NOZ[4][3] = {{0.23, -0.35, 30}, {-0.23, 0.35, 210}, {0.23, 0.35, 150}, {-0.23, -0.35, -30}}; /* where, and which way the bell points */
+    double tf = ramp(T, T_TURN, T_BURN - 3), firing = tf > 0.02 && tf < 0.3 ? 1 : tf > 0.7 && tf < 0.98 ? -1 : 0;
+    for (int i = 0; i < 4; i++) {
+        double na = NOZ[i][2] * M_PI / 180, ox = sin(na), oy = -cos(na);
+        int pair = i < 2 ? 1 : -1; /* the first pair turns it clockwise */
+        if (firing * (turn_to > 0 ? 1 : -1) * pair > 0) {
+            double fl = 0.2 + 0.06 * sin(anim_t * 61 + i);
+            ship_pic_turned(SP_FLASH, NOZ[i][0] + ox * 0.15, NOZ[i][1] + oy * 0.15, fl * 0.5, fl * 1.5, 0.9, NOZ[i][2]);
+        }
+        ship_pic_turned(SP_NOZZLE, NOZ[i][0] + ox * 0.02, NOZ[i][1] + oy * 0.02, wide(SP_NOZZLE, 0.1), 0.1, 1, NOZ[i][2]);
+    }
     /* charges on their way out */
     for (int i = 0; i < NFLY; i++) if (fly[i] >= 0) {
         double f = (T - fly[i]) / FLIGHT;
-        ship_pic(SP_CHARGE, px - 0.03 + (BURST_X - px) * f, 0, wide(SP_CHARGE, 0.07), 0.07, 1);
+        ship_pic(SP_CHARGE, px - 0.05 + (BURST_X - px) * f, 0, wide(SP_CHARGE, 0.06), 0.06, 1);
     }
+    double ph0 = 0.7, face = px - wide(SP_PLATE, ph0) * 0.42; /* the burnt face of the plate */
     /* the plasma against the plate, then the plate over it */
     if (since >= 0 && since < 0.9) {
-        double f = since / 0.9, ph = 0.75 + 0.5 * f, pw = wide(SP_PLASMA, ph) * (0.7 + 0.5 * f);
-        ship_pic(SP_PLASMA, px - 0.02 - pw / 2, 0, pw, ph, (1 - f) * (1 - f) * 1.2);
+        double f = since / 0.9, ph = 0.7 + 0.5 * f, pw = wide(SP_PLASMA, ph) * (0.75 + 0.4 * f);
+        ship_pic(SP_PLASMA, face + 0.04 - pw / 2, 0, pw, ph, (1 - f) * (1 - f) * 1.3);
     }
-    ship_pic(SP_PLATE, px, 0, wide(SP_PLATE, 0.66), 0.66, 1);
+    ship_pic(SP_PLATE, px, 0, wide(SP_PLATE, ph0), ph0, 1);
+    /* the ablative layer glows and boils off, and the vapour trails away behind */
+    if (since >= 0.05 && since < 1.5) {
+        double f = (since - 0.05) / 1.45, vh = ph0 * (1.0 + 0.25 * f), vw = wide(SP_VAPOUR, vh) * (0.8 + 0.9 * f);
+        ship_pic(SP_VAPOUR, face + 0.05 - vw * 0.5 - 0.1 * f, 0, vw, vh, (1 - f) * 1.1);
+    }
     if (since >= 0 && since < 0.45) {
-        double f = since / 0.45, d = 0.3 + 1.1 * f;
+        double f = since / 0.45, d = 0.35 + 1.3 * f;
         ship_pic(SP_FLASH, BURST_X, 0, d, d, (1 - f) * 1.3);
     }
-    if (glare > 0) { rect(0, 0, w, h, (SDL_Color){255, 244, 220, (Uint8)(glare * glare * 70)}); flush(r); }
+    if (glare > 0) { rect(0, 0, w, h, (SDL_Color){255, 244, 220, (Uint8)(glare * glare * 60)}); flush(r); }
 
     double grow = ease(ramp(T, 6, 9)) * (1 - ease(ramp(T, ROUND - 6, ROUND - 3)));
     if (grow > 0.01) {

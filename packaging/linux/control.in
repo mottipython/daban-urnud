@@ -1,0 +1,16 @@
+Package: daban-urnud
+Version: @VERSION@
+Section: games
+Priority: optional
+Architecture: @ARCH@
+Depends: libc6 (>= 2.38), libsdl2-2.0-0 (>= 2.0.18), swayidle
+Installed-Size: @SIZE@
+Maintainer: Motti Schleider <motti.schleider@gmail.com>
+Description: The Daban Urnud, a screensaver from "Anathem"
+ The Geometers' ship from Neal Stephenson's novel Anathem, changing course:
+ it turns, lets atomic propulsion charges out through its pusher plate one
+ after another, and rides the blasts on its shock absorbers, while the orbs go
+ round the Core inside.
+ .
+ On Wayland desktops it starts by itself after five minutes idle.
+ daban-urnud-screensaver changes the delay or turns it off.

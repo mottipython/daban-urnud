@@ -4,9 +4,9 @@ under assets/art.
 
     tools/make_sprites.py
 
-parts.jpeg is a sheet: six drawings on one flat magenta background, not touching.
-It is cut into its separate drawings, read off in rows, left to right. blasts.jpeg
-is two pictures of light on black, side by side; they stay on black, because the
+parts.jpeg is a sheet: eight drawings on one flat magenta background, not touching.
+It is cut into its separate drawings, read off in rows, left to right; plate.jpeg
+is the pusher plate on its own. blasts.jpeg is three pictures of light on black, side by side; they stay on black, because the
 program adds them to what is behind. space.jpeg is the background. Needs
 ImageMagick and numpy.
 """
@@ -15,7 +15,7 @@ import numpy as np
 
 SRC, OUT = "assets/src", "assets/art"
 ROWS = 2
-PARTS = [("hull", 900), ("plate", 600), ("orb", 300), ("hub", 300), ("charge", 120), ("shock", 110)]  # name, pixels tall
+PARTS = [("hull", 900), (None, 0), ("orb", 300), ("hub", 300), ("charge", 120), ("cyl", 110), ("rod", 80), ("nozzle", 200)]  # name, pixels tall
 
 def load(path):
     w, h = map(int, subprocess.check_output(["magick", "identify", "-format", "%w %h", path]).split())
@@ -71,17 +71,21 @@ def main():
     if len(got) != len(PARTS):
         raise SystemExit(f"parts: found {len(got)} drawings, expected {len(PARTS)}")
     for (name, tall), p in zip(PARTS, got):
+        if not name: continue  # the plate has a drawing to itself
         tall = min(tall, p.shape[0])
         w = max(1, round(p.shape[1] * tall / p.shape[0]))
         save(p, w, tall, f"{OUT}/{name}.png")
         print(name, w, tall)
+    p = trim(key(load(f"{SRC}/plate.jpeg")))
+    save(p, round(p.shape[1] * 700 / p.shape[0]), 700, f"{OUT}/plate.png")
+    print("plate")
     # the blasts: split where the picture is dark all the way down
     img = load(f"{SRC}/blasts.jpeg")
     lit = img.max(axis=2).max(axis=0) > 40
     cols = runs(lit, 30)
-    if len(cols) != 2:
-        raise SystemExit(f"blasts: found {len(cols)} pictures, expected 2")
-    for name, (x0, x1) in zip(["flash", "plasma"], cols):
+    if len(cols) != 3:
+        raise SystemExit(f"blasts: found {len(cols)} pictures, expected 3")
+    for name, (x0, x1) in zip(["flash", "plasma", "vapour"], cols):
         part = img[:, max(0, x0 - 20):x1 + 20]
         rows = np.where(part.max(axis=2).max(axis=1) > 40)[0]
         part = part[max(0, rows.min() - 20):rows.max() + 20]

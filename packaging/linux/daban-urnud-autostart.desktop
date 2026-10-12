@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=The Daban Urnud screensaver
+Comment=Start the Daban Urnud when the session has been idle
+Exec=daban-urnud-screensaver watch
+Icon=daban-urnud
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

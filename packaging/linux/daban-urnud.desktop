@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=The Daban Urnud
+Comment=The Geometers' ship changes course on atomic bombs
+Exec=daban-urnud --window
+Icon=daban-urnud
+Categories=Game;LogicGame;Education;Math;
+Keywords=Anathem;Geometers;spaceship;Orion;screensaver;
