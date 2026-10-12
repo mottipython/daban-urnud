@@ -442,8 +442,8 @@ static void strut(const double *a, const double *b)
 
 static void draw_frame(void)
 {
-    int front[NF], vseen[NV] = {0}, best = -1;
-    double bestz = 0;
+    int front[NF], vseen[NV] = {0}, best = -1, second = -1;
+    double bestz = 0, secondz = 0;
     flush(ren);
     /* the gravel skin: the faces that are turned towards us */
     for (int f = 0; f < NF; f++) {
@@ -455,7 +455,8 @@ static void draw_frame(void)
         for (int k = 0; k < 3; k++) n[k] /= nl;
         front[f] = n[2] > 0.03;
         if (!front[f]) continue;
-        if (n[2] > bestz) { bestz = n[2]; best = f; }
+        if (n[2] > bestz) { secondz = bestz; second = best; bestz = n[2]; best = f; }
+        else if (n[2] > secondz) { secondz = n[2]; second = f; }
         /* lit from above and ahead, in the ship's own frame turned to the screen */
         double lx = n[0] * sc - n[1] * ss, ly = n[0] * ss + n[1] * sc;
         double lit = 0.62 + 0.3 * n[2] + 0.22 * (-ly * 0.8 + lx * 0.3);
@@ -487,6 +488,35 @@ static void draw_frame(void)
             ship_pt(cx + (D[k][0] - 2.4) * q, cy + (D[k][1] + 0.6) * q, &x, &y);
             ship_pt(cx + (D[k][2] - 2.4) * q, cy + (D[k][3] + 0.6) * q, &x1, &y1);
             line(x, y, x1, y1, sH * 0.006, white);
+        }
+        flush(ren);
+    }
+    /* The four home worlds, painted on the next face: each a circle with the outline
+     * of its land, which is how they are told apart. Urnud has one great continent,
+     * Tro nothing but islands, Laterre a continent at its southern pole, and Fthos a
+     * belt of land round its equator. */
+    if (second >= 0) {
+        double cx = 0, cy = 0, rr = 0.047, gap = 0.051;
+        for (int k = 0; k < 3; k++) { cx += pos[face[second][k]][0] / 3; cy += pos[face[second][k]][1] / 3; }
+        SDL_Color white = col(PAPER, 0.8);
+        double wd = sH * 0.0042;
+        static const double PANGEE[][2] = {{-0.5, -0.45}, {0.1, -0.6}, {0.55, -0.3}, {0.45, 0.2}, {0.6, 0.5}, {0.1, 0.6}, {-0.3, 0.35}, {-0.6, 0.1}};
+        static const double ISLES[][2] = {{-0.5, -0.3}, {-0.1, -0.55}, {0.4, -0.4}, {0.6, 0.05}, {0.15, 0.0}, {-0.35, 0.2}, {-0.55, 0.5}, {0.0, 0.6}, {0.45, 0.5}, {-0.1, -0.15}};
+        for (int g = 0; g < 4; g++) {
+            double gx = cx + (g % 2 ? gap : -gap), gy = cy + (g / 2 ? gap : -gap), x0, y0, x1, y1;
+            #define GLINE(ax, ay, bx, by) (ship_pt(gx + (ax) * rr, gy + (ay) * rr, &x0, &y0), ship_pt(gx + (bx) * rr, gy + (by) * rr, &x1, &y1), line(x0, y0, x1, y1, wd, white))
+            for (int k = 0; k < 20; k++) GLINE(cos(k * M_PI / 10), sin(k * M_PI / 10), cos((k + 1) * M_PI / 10), sin((k + 1) * M_PI / 10));
+            if (g == 0) for (int k = 0; k < 8; k++) GLINE(PANGEE[k][0], PANGEE[k][1], PANGEE[(k + 1) % 8][0], PANGEE[(k + 1) % 8][1]);
+            else if (g == 1) for (int k = 0; k < 10; k++) for (int q = 0; q < 6; q++)
+                GLINE(ISLES[k][0] + 0.11 * cos(q * M_PI / 3), ISLES[k][1] + 0.08 * sin(q * M_PI / 3), ISLES[k][0] + 0.11 * cos((q + 1) * M_PI / 3), ISLES[k][1] + 0.08 * sin((q + 1) * M_PI / 3));
+            else if (g == 2) for (int k = 0; k < 8; k++) { /* the shore of the land at the south pole */
+                double u0 = -0.8 + 0.2 * k, u1 = u0 + 0.2;
+                GLINE(u0, 0.5 + 0.1 * sin(u0 * 9), u1, 0.5 + 0.1 * sin(u1 * 9));
+            } else for (int side = -1; side <= 1; side += 2) for (int k = 0; k < 9; k++) { /* the two shores of the belt */
+                double edge_x = side < 0 ? 0.96 : 0.92, u0 = -edge_x + 2 * edge_x * k / 9.0, u1 = -edge_x + 2 * edge_x * (k + 1) / 9.0;
+                GLINE(u0, side * 0.24 + 0.07 * sin(u0 * 8 + side), u1, side * 0.24 + 0.07 * sin(u1 * 8 + side));
+            }
+            #undef GLINE
         }
         flush(ren);
     }

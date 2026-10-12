@@ -14,8 +14,10 @@ have weight. It is driven by atomic bombs. Propulsion charges are let out behind
 it and set off, and the blast strikes a pusher plate on the face at the stern, which
 stands off the ship on shock absorbers. The thirty edges of the icosahedron are
 shock absorbers too, so the whole frame takes the blow.
-Its skin is gravel, for shielding. On its hull is a proof of the Adrakhonic
-theorem.
+Its skin is gravel, for shielding. On its hull are a proof of the Adrakhonic
+theorem and the four home worlds, told apart by the shape of their land: Urnud one
+great continent, Tro all islands, Laterre a continent at its southern pole, Fthos
+a belt round its equator.
 
 ## What the screensaver shows
 
@@ -73,7 +75,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.10.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.11.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -82,11 +84,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.10-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.11-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.10_amd64.deb
+    sudo apt install ./daban-urnud_1.0.11_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the
