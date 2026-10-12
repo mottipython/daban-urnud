@@ -168,7 +168,7 @@ static void line(double x0, double y0, double x1, double y1, double w, SDL_Color
     }
     if (w > 2.5) { disc(x0, y0, w / 2, c, c); disc(x1, y1, w / 2, c, c); }
 }
-static void ring(double cx, double cy, double r, double w, SDL_Color c)
+__attribute__((unused)) static void ring(double cx, double cy, double r, double w, SDL_Color c)
 {
     for (int i = 0; i < 64; i++) {
         double a = i * M_PI / 32, b = (i + 1) * M_PI / 32;
@@ -506,7 +506,7 @@ static void caption(const char **l1, const char **l2)
 {
     static char count[64];
     *l1 = "THE DABAN URNUD"; *l2 = "THE GEOMETERS' SHIP, IN ORBIT ABOUT ARBRE";
-    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "FOUR LEVELS OF FOUR ORBS, NESTED TO FILL THE ICOSAHEDRON"; }
+    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "FOUR LEVELS OF FOUR ORBS, EACH NESTED IN THE HOLLOWS OF THE LAST"; }
     if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "NO THRUSTERS: COUNTERWEIGHTS ON TRACKS INSIDE SWING IT ROUND"; }
     if (T >= T_BURN - 3) { *l1 = "PROPULSION CHARGES"; *l2 = "ATOMIC BOMBS, LET OUT THROUGH THE PLATE ONE BY ONE"; }
     if (T >= T_BURN + 12) { *l1 = "THIRTY STRUTS, EVERY ONE A SHOCK ABSORBER"; *l2 = "THE BLOW RUNS FORWARD THROUGH THE WHOLE FRAME"; }
@@ -532,75 +532,76 @@ static void draw_caption(int w, int h, const char *l1, const char *l2)
     text(l2, w / 2.0, by + bh * 0.25 + s1 * 6 + unit * 1.2, s2, 0.9, col(CHORD, 1));
 }
 
-/* The orbstacks in a round window, seen a little from one side: four levels of
- * four orbs about the Core. The four in a level touch, and each level is turned an
- * eighth of a turn from the last, so that its orbs nest in the hollows between
- * the ones behind. They all go round together. */
-static void draw_core(double cx, double cy, double R)
+/* The orbstacks, close to, in a panel: four levels of four orbs about the Core,
+ * which stands upright here. The four in a level touch, and each level is turned
+ * an eighth of a turn from the last, so that its orbs nest in the hollows between
+ * the ones below. Lattice towers run up the outside in the hollows that are left.
+ * It all goes round the Core as one piece. */
+typedef struct { double z; int kind, n; } Item; /* something to draw, and how near it is */
+static int nearer(const void *a, const void *b)
 {
-    disc(cx, cy, R * 1.06, col(STEEL, 1), col(STEEL, 1));
-    disc(cx, cy, R, col(DEEP, 1), col(BG, 1));
-    /* the Core points out of the picture, down and to the right; z is towards us */
-    double tilt = 1.05, ax = sin(tilt) * 0.82, ay = sin(tilt) * 0.57, az = cos(tilt);
-    double ux = -0.57, uy = 0.82;                              /* across the Core, flat on the screen */
-    double vx = -az * uy, vy = az * ux, vz = ax * uy - ay * ux; /* and the other way across */
-    double rho = R * 0.18;
-    /* The four in a level touch and each level nests in the last; they are set a
-     * little closer than that, pressed into each other, the way they look when the
-     * whole stack is seen at once. */
-    double reach = rho * 1.4142 * 0.9, gap = rho * 1.682 * 0.9;
-    struct { double x, y, z, hx, hy, deg; } o[16], t;
-    for (int k = 0; k < 4; k++) for (int i = 0; i < 4; i++) {
-        double along = (k - 1.5) * gap, a = spin + i * M_PI / 2 + k * M_PI / 4, c = cos(a), sn = sin(a);
-        int n = k * 4 + i;
-        o[n].hx = cx + ax * along; o[n].hy = cy + ay * along;
-        o[n].x = o[n].hx + (ux * c + vx * sn) * reach; o[n].y = o[n].hy + (uy * c + vy * sn) * reach;
-        o[n].z = az * along + vz * sn * reach;
-        /* every orb is drawn the same way up, its band of windows lying along the Core:
-         * the whole stack goes round the Core as one piece and no orb turns on its own */
-        o[n].deg = atan2(ay, ax) * 180 / M_PI;
-    }
-    for (int i = 0; i < 16; i++) for (int j = i + 1; j < 16; j++) if (o[j].z < o[i].z) { t = o[i]; o[i] = o[j]; o[j] = t; }
-    /* the icosahedron they fill, the Core running from the middle of the stern face
-     * to the middle of the bow face: a little over 5 orb-radii from the middle to a
-     * corner is the size at which the stacked orbs just fit it */
-    double big = 5.0 * rho / RADIUS, fx[NV], fy[NV], fz[NV];
-    for (int i = 0; i < NV; i++) {
-        fx[i] = cx + (ax * rest[i][0] + ux * rest[i][1] + vx * rest[i][2]) * big;
-        fy[i] = cy + (ay * rest[i][0] + uy * rest[i][1] + vy * rest[i][2]) * big;
-        fz[i] = az * rest[i][0] + vz * rest[i][2];
-    }
-    for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] <= 0) /* the far struts, behind everything */
-        line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.02, col(STEEL, 0.4));
-    /* The Core, from the stern face to the bow face, and the orbs going round it.
-     * The Core is drawn in short lengths, and lengths and orbs are put down together
-     * from the farthest to the nearest, so an orb on the far side of the Core goes
-     * behind it and comes out in front as it comes round. */
-    double ce = 0.7947 * RADIUS * big;
-    enum { NSEG = 14 };
-    int next = 0;
-    for (int k = 0; k <= NSEG; k++) {
-        double zk = k < NSEG ? az * (-ce + (k + 0.5) * 2 * ce / NSEG) / reach : 1e9; /* to compare with the orbs */
-        for (; next < 16 && o[next].z / reach <= zk; next++) {
-            double size = 1 + 0.12 * o[next].z / (2 * gap);
-            flush(ren);
-            turned(SP_ORB, o[next].x, o[next].y, 2 * rho * size, o[next].deg);
-        }
-        if (k == NSEG) break;
-        double t0 = -ce + k * 2 * ce / NSEG - 0.5, t1 = -ce + (k + 1) * 2 * ce / NSEG + 0.5;
-        line(cx + ax * t0, cy + ay * t0, cx + ax * t1, cy + ay * t1, R * 0.1, col(INK, 1));
-        line(cx + ax * t0, cy + ay * t0, cx + ax * t1, cy + ay * t1, R * 0.07, col(STEEL, 1));
-    }
-    for (int e = 0; e < NE; e++) if (fz[edge[e][0]] + fz[edge[e][1]] > 0) { /* the near struts, over the orbs */
-        line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.034, col(INK, 0.85));
-        line(fx[edge[e][0]], fy[edge[e][0]], fx[edge[e][1]], fy[edge[e][1]], R * 0.018, col(STEEL, 1));
-    }
-    for (int i = 0; i < NV; i++) if (fz[i] > -0.05) {
-        disc(fx[i], fy[i], R * 0.036, col(INK, 1), col(INK, 1));
-        disc(fx[i], fy[i], R * 0.024, col(STEEL, 1), col(STEEL, 1));
-    }
-    ring(cx, cy, R * 1.03, R * 0.07, col(INK, 0.9));
+    double d = ((const Item *)a)->z - ((const Item *)b)->z;
+    return d < 0 ? -1 : d > 0;
+}
+static void draw_core(double px, double py, double pw, double ph)
+{
+    double b = unit * 0.5;
+    rect(px - b, py - b, pw + 2 * b, ph + 2 * b, col(INK, 1));
+    rect(px - b * 0.6, py - b * 0.6, pw + b * 1.2, ph + b * 1.2, col(STEEL, 1));
+    rect(px, py, pw, ph, col(DEEP, 1));
     flush(ren);
+    SDL_Rect clip = {(int)px, (int)py, (int)pw, (int)ph};
+    SDL_RenderSetClipRect(ren, &clip);
+    double cx = px + pw / 2, cy = py + ph / 2;
+    /* we look from the side and a little from above; z is towards us */
+    double tilt = 1.3, ay = -sin(tilt), az = cos(tilt), vy = az, vz = sin(tilt);
+    double rho = ph / 5.7, reach = rho * 1.4142 * 0.9, gap = rho * 1.682 * 0.9, tower = rho * 2.0;
+    enum { NSEG = 12, NTOW = 8, TSEG = 6, NITEM = 16 + NSEG + NTOW * TSEG };
+    Item it[NITEM];
+    int ni = 0;
+    for (int n = 0; n < 16; n++) {
+        double along = (n / 4 - 1.5) * gap, a = spin + (n % 4) * M_PI / 2 + (n / 4) * M_PI / 4;
+        it[ni++] = (Item){az * along + vz * sin(a) * reach, 0, n};
+    }
+    double ce = gap * 2.6; /* the Core runs on out of the picture at both ends */
+    for (int k = 0; k < NSEG; k++) it[ni++] = (Item){az * (-ce + (k + 0.5) * 2 * ce / NSEG), 1, k};
+    for (int j = 0; j < NTOW; j++) for (int k = 0; k < TSEG; k++) {
+        double a = spin + M_PI / 8 + j * M_PI / 4;
+        it[ni++] = (Item){az * (-ce + (k + 0.5) * 2 * ce / TSEG) + vz * sin(a) * tower, 2, j * TSEG + k};
+    }
+    qsort(it, ni, sizeof it[0], nearer);
+    for (int i = 0; i < ni; i++) {
+        if (it[i].kind == 0) {
+            int n = it[i].n;
+            double along = (n / 4 - 1.5) * gap, a = spin + (n % 4) * M_PI / 2 + (n / 4) * M_PI / 4;
+            double x = cx + cos(a) * reach, y = cy + ay * along + vy * sin(a) * reach;
+            double size = 1 + 0.07 * sin(a);
+            flush(ren);
+            turned(SP_ORB, x, y, 2 * rho * size, 0);
+        } else if (it[i].kind == 1) {
+            double t0 = -ce + it[i].n * 2 * ce / NSEG - 0.5, t1 = t0 + 2 * ce / NSEG + 1;
+            line(cx, cy + ay * t0, cx, cy + ay * t1, rho * 0.62, col(INK, 1));
+            line(cx, cy + ay * t0, cx, cy + ay * t1, rho * 0.5, col(STEEL, 1));
+            line(cx - rho * 0.1, cy + ay * t0, cx - rho * 0.1, cy + ay * t1, rho * 0.1, col(PAPER, 0.35));
+        } else {
+            int j = it[i].n / TSEG, k = it[i].n % TSEG;
+            double a = spin + M_PI / 8 + j * M_PI / 4, x = cx + cos(a) * tower, yo = vy * sin(a) * tower;
+            double t0 = -ce + k * 2 * ce / TSEG, t1 = t0 + 2 * ce / TSEG, y0 = cy + ay * t0 + yo, y1 = cy + ay * t1 + yo;
+            double wd = rho * 0.15, shade = 0.75 + 0.25 * sin(a);
+            SDL_Color steel = {(Uint8)(STEEL.r * shade), (Uint8)(STEEL.g * shade), (Uint8)(STEEL.b * shade), 255};
+            line(x - wd / 2, y0, x - wd / 2, y1, rho * 0.06, col(INK, 1));
+            line(x + wd / 2, y0, x + wd / 2, y1, rho * 0.06, col(INK, 1));
+            for (int q = 0; q < 4; q++) { /* the lattice between the two rails */
+                double ya = y0 + (y1 - y0) * q / 4, yb = y0 + (y1 - y0) * (q + 1) / 4;
+                line(x - wd / 2, ya, x + wd / 2, yb, rho * 0.032, col(INK, 1));
+                line(x + wd / 2, ya, x - wd / 2, yb, rho * 0.032, col(INK, 1));
+            }
+            line(x - wd / 2, y0, x - wd / 2, y1, rho * 0.03, steel);
+            line(x + wd / 2, y0, x + wd / 2, y1, rho * 0.03, steel);
+        }
+    }
+    flush(ren);
+    SDL_RenderSetClipRect(ren, NULL);
 }
 
 static void draw_scene(SDL_Renderer *r, int w, int h)
@@ -625,7 +626,7 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     double since = T - last_burst, glare = since >= 0 && since < 0.5 ? 1 - since / 0.5 : 0;
     double shake = glare * glare * unit * 0.5;
     sH = h * 0.42; sc = cos(ship_deg * M_PI / 180); ss = sin(ship_deg * M_PI / 180);
-    sx0 = w * 0.56 + sin(anim_t * 47) * shake; sy0 = h * 0.42 + cos(anim_t * 53) * shake;
+    sx0 = w * 0.66 + sin(anim_t * 47) * shake; sy0 = h * 0.42 + cos(anim_t * 53) * shake;
     draw_frame();
     double px = plate_x;
     /* the plate's shock absorbers, from its back to the corners of the stern face */
@@ -657,10 +658,10 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     if (glare > 0) { rect(0, 0, w, h, (SDL_Color){255, 244, 220, (Uint8)(glare * glare * 60)}); flush(r); }
 
     double grow = ease(ramp(T, 6, 9)) * (1 - ease(ramp(T, ROUND - 6, ROUND - 3)));
-    if (grow > 0.01) {
-        double R = h * 0.22 * grow, cx = w * 0.15, cy = h * 0.29;
-        draw_core(cx, cy, R);
-        if (grow > 0.9) text("THE ORBSTACKS", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
+    if (grow > 0.01) { /* the panel slides in from the left */
+        double ph = h * 0.6, pw = ph * 0.8, px = w * 0.03 - (1 - grow) * (pw + w * 0.05), py = h * 0.06;
+        draw_core(px, py, pw, ph);
+        text("THE ORBSTACKS", px + pw / 2, py + ph + unit * 1.6, unit * 0.22, 0.9, col(PAPER, 0.9));
     }
     const char *l1, *l2;
     caption(&l1, &l2);

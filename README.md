@@ -21,12 +21,11 @@ theorem.
 
 One change of course, about a minute and a half, then another at a different angle.
 
-- **In orbit.** The ship coasts over Arbre. Arbre slides by underneath. A round window shows the
-  orbstacks inside: four levels of four orbs about the Core, the four in a level
-  touching, and each level turned an eighth of a turn so that it nests in the
-  hollows of the last. Stacked like that they fill the icosahedron, which is
-  drawn round them, with the Core running through from the stern face to the bow
-  face; orbs pass behind it and in front of it as they come round. They all go round together and never stop.
+- **In orbit.** The ship coasts and Arbre slides by underneath. A panel shows the
+  orbstacks inside, close to: four levels of four orbs about the Core, the four
+  in a level touching, and each level turned an eighth of a turn so that it nests
+  in the hollows of the last, with lattice towers up the outside. They go round
+  the Core as one piece, passing behind it and in front of it, and never stop.
 - **The turn.** No thrusters. Counterweights run round tracks inside the ship,
   out of sight, and the ship swings round the other way.
 - **The burn.** A charge drops out through the plate every second or two, flies a
@@ -42,7 +41,7 @@ springs, with the plate a thirteenth on three more. Nothing about how it flexes 
 | | |
 |---|---|
 | ![](docs/screenshots/02-the-orbs.jpg) | ![](docs/screenshots/03-the-turn.jpg) |
-| The orbstacks about the Core | The ship turning |
+| The orbstacks, close to | The ship turning |
 | ![](docs/screenshots/04-charge-away.jpg) | ![](docs/screenshots/06-the-frame-takes-it.jpg) |
 | A charge on its way out | The frame takes the blast |
 
@@ -62,7 +61,8 @@ being seen from Arbre as a string of sparks.
 
 Mine: how it all looks from the side, the number of shock absorbers behind the
 plate, the ablative
-layer on the plate (usual for this kind of drive), how stiff the frame is, and
+layer on the plate (usual for this kind of drive), the lattice towers among the
+orbs, how stiff the frame is, and
 the timing.
 
 ## Install
@@ -71,7 +71,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.8.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.9.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -80,11 +80,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.8-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.9-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.8_amd64.deb
+    sudo apt install ./daban-urnud_1.0.9_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the
