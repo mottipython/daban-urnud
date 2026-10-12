@@ -20,8 +20,9 @@ theorem.
 
 One change of course, about a minute and a half, then another at a different angle.
 
-- **In orbit.** The ship coasts over Arbre. A round window looks along the Core at
-  one ring of four orbs going round; they never stop.
+- **In orbit.** The ship coasts over Arbre. A round window shows the orbstacks inside:
+  four rings of four orbs, one behind another along the Core, all going round.
+  They never stop.
 - **The turn.** No thrusters. Counterweights run round tracks inside the ship,
   out of sight, and the ship swings round the other way.
 - **The burn.** A charge drops out through the plate every second or two, flies a
@@ -37,7 +38,7 @@ springs. Nothing about how it flexes is a canned animation.
 | | |
 |---|---|
 | ![](docs/screenshots/02-the-orbs.jpg) | ![](docs/screenshots/03-the-turn.jpg) |
-| The orbs, seen along the Core | The ship turning |
+| The orbstacks about the Core | The ship turning |
 | ![](docs/screenshots/04-charge-away.jpg) | ![](docs/screenshots/06-the-frame-takes-it.jpg) |
 | A charge on its way out | The frame takes the blast |
 
@@ -62,7 +63,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.1.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.2.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -71,11 +72,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.1-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.2-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.1_amd64.deb
+    sudo apt install ./daban-urnud_1.0.2_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the

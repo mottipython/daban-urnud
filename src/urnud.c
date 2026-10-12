@@ -478,7 +478,7 @@ static void caption(const char **l1, const char **l2)
 {
     static char count[64];
     *l1 = "THE DABAN URNUD"; *l2 = "THE GEOMETERS' SHIP, IN ORBIT ABOUT ARBRE";
-    if (T > 8) { *l1 = "INSIDE, SIXTEEN ORBS TURN ABOUT THE CORE"; *l2 = "FOUR FOR EACH RACE: URNUD, TRO, LATERRE AND FTHOS"; }
+    if (T > 8) { *l1 = "INSIDE, THE ORBSTACKS TURN ABOUT THE CORE"; *l2 = "SIXTEEN ORBS, FOUR FOR EACH RACE: URNUD, TRO, LATERRE AND FTHOS"; }
     if (T >= T_TURN) { *l1 = "A CHANGE OF COURSE"; *l2 = "NO THRUSTERS: COUNTERWEIGHTS ON TRACKS INSIDE SWING IT ROUND"; }
     if (T >= T_BURN - 3) { *l1 = "PROPULSION CHARGES"; *l2 = "ATOMIC BOMBS, LET OUT THROUGH THE PLATE ONE BY ONE"; }
     if (T >= T_BURN + 12) { *l1 = "THIRTY STRUTS, EVERY ONE A SHOCK ABSORBER"; *l2 = "THE BLOW RUNS FORWARD THROUGH THE WHOLE FRAME"; }
@@ -504,23 +504,44 @@ static void draw_caption(int w, int h, const char *l1, const char *l2)
     text(l2, w / 2.0, by + bh * 0.25 + s1 * 6 + unit * 1.2, s2, 0.9, col(CHORD, 1));
 }
 
-/* Looking along the Core, in a round window: one ring of four orbs going round. */
+/* The Core in a round window, seen a little from one side so that the stacks show:
+ * four rings of four orbs, one ring behind another along the Core, all going
+ * round together. */
 static void draw_core(double cx, double cy, double R)
 {
     disc(cx, cy, R * 1.06, col(STEEL, 1), col(STEEL, 1));
     disc(cx, cy, R, col(DEEP, 1), col(BG, 1));
-    double reach = R * 0.62, orb = R * 0.5;
-    for (int i = 0; i < 4; i++) {
-        double a = spin + i * M_PI / 2;
-        line(cx, cy, cx + cos(a) * reach, cy + sin(a) * reach, R * 0.07, col(INK, 1));
-        line(cx, cy, cx + cos(a) * reach, cy + sin(a) * reach, R * 0.04, col(STEEL, 1));
+    /* the Core points out of the picture, down and to the right; z is towards us */
+    double tilt = 0.66, ax = sin(tilt) * 0.82, ay = sin(tilt) * 0.57, az = cos(tilt);
+    double ux = -0.57, uy = 0.82;                              /* across the Core, flat on the screen */
+    double vx = ay * 0 - az * uy, vy = az * ux - ax * 0, vz = ax * uy - ay * ux; /* and the other way across */
+    double reach = R * 0.44, gap = R * 0.37, orb = R * 0.25;
+    for (int k = 0; k < 4; k++) { /* the farthest ring first */
+        double along = (k - 1.5) * gap, hx = cx + ax * along, hy = cy + ay * along;
+        double nx = cx + ax * (along + gap), ny = cy + ay * (along + gap), size = 1 + 0.1 * (k - 1.5);
+        struct { double x, y, z, deg; } o[4];
+        for (int i = 0; i < 4; i++) {
+            double a = spin + i * M_PI / 2, c = cos(a), sn = sin(a);
+            o[i].x = hx + (ux * c + vx * sn) * reach; o[i].y = hy + (uy * c + vy * sn) * reach; o[i].z = vz * sn;
+            o[i].deg = atan2(o[i].y - hy, o[i].x - hx) * 180 / M_PI + 90;
+        }
+        for (int i = 0; i < 4; i++) for (int j = i + 1; j < 4; j++) /* far side of the ring first */
+            if (o[j].z < o[i].z) { double t[4] = {o[i].x, o[i].y, o[i].z, o[i].deg}; o[i] = o[j]; o[j].x = t[0]; o[j].y = t[1]; o[j].z = t[2]; o[j].deg = t[3]; }
+        for (int half = 0; half < 2; half++) {
+            for (int i = half * 2; i < half * 2 + 2; i++) {
+                line(hx, hy, o[i].x, o[i].y, R * 0.05 * size, col(INK, 1));
+                line(hx, hy, o[i].x, o[i].y, R * 0.028 * size, col(STEEL, 1));
+                flush(ren);
+                turned(SP_ORB, o[i].x, o[i].y, orb * size, o[i].deg);
+            }
+            if (half == 0 && k < 3) { /* the Core itself, on to the next ring, between the far orbs and the near */
+                line(hx, hy, nx, ny, R * 0.085, col(INK, 1));
+                line(hx, hy, nx, ny, R * 0.055, col(STEEL, 1));
+            }
+        }
+        disc(hx, hy, R * 0.06 * size, col(INK, 1), col(INK, 1));
+        disc(hx, hy, R * 0.042 * size, col(STEEL, 1), col(STEEL, 1));
     }
-    flush(ren);
-    for (int i = 0; i < 4; i++) {
-        double a = spin + i * M_PI / 2;
-        turned(SP_ORB, cx + cos(a) * reach, cy + sin(a) * reach, orb, a * 180 / M_PI + 90);
-    }
-    turned(SP_HUB, cx, cy, R * 0.44, spin * 180 / M_PI);
     ring(cx, cy, R * 1.03, R * 0.07, col(INK, 0.9));
     flush(ren);
 }
@@ -567,9 +588,9 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
 
     double grow = ease(ramp(T, 6, 9)) * (1 - ease(ramp(T, ROUND - 6, ROUND - 3)));
     if (grow > 0.01) {
-        double R = h * 0.15 * grow, cx = w * 0.115, cy = h * 0.22;
+        double R = h * 0.2 * grow, cx = w * 0.14, cy = h * 0.27;
         draw_core(cx, cy, R);
-        if (grow > 0.9) text("LOOKING ALONG THE CORE", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
+        if (grow > 0.9) text("THE ORBSTACKS", cx, cy + R * 1.16, unit * 0.2, 0.9, col(PAPER, 0.85));
     }
     const char *l1, *l2;
     caption(&l1, &l2);
