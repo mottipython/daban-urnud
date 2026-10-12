@@ -11,8 +11,9 @@ The Daban Urnud is the starship that turns up in orbit about Arbre: an icosahedr
 with sixteen orbs inside it, four for each of the four races aboard (Urnud, Tro,
 Laterre and Fthos), going round a central Core so that the people living in them
 have weight. It is driven by atomic bombs. Propulsion charges are let out behind
-it and set off, and the blast strikes a pusher plate at the stern. The thirty
-edges of the icosahedron are shock absorbers, so the whole frame takes the blow.
+it and set off, and the blast strikes a pusher plate on the face at the stern, which
+stands off the ship on shock absorbers. The thirty edges of the icosahedron are
+shock absorbers too, so the whole frame takes the blow.
 Its skin is gravel, for shielding. On its hull is a proof of the Adrakhonic
 theorem.
 
@@ -24,19 +25,19 @@ One change of course, about a minute and a half, then another at a different ang
   orbstacks inside: four levels of four orbs about the Core, the four in a level
   touching, and each level turned an eighth of a turn so that it nests in the
   hollows of the last. Stacked like that they fill the icosahedron, which is
-  drawn round them, with the Core running through from the corner at the stern
-  to the corner at the bow. They all go round together and never stop.
+  drawn round them, with the Core running through from the stern face to the bow
+  face; orbs pass behind it and in front of it as they come round. They all go round together and never stop.
 - **The turn.** No thrusters. Counterweights run round tracks inside the ship,
   out of sight, and the ship swings round the other way.
 - **The burn.** A charge drops out through the plate every second or two, flies a
   little way aft and goes off. The plasma hits the plate, and the plate's ablative
-  layer glows and boils off. The stern corner is driven in, its five struts
-  shorten, rods sliding into cylinders, and the squeeze runs forward through the
-  frame to the bow. The stars begin to slide by.
+  layer glows and boils off. The plate is driven in on its three shock
+  absorbers, rods sliding into cylinders; they push on the corners of the stern
+  face, and the squeeze runs forward through the frame to the bow. The stars begin to slide by.
 - **The new course.** The burn ends and the ship coasts again.
 
 The frame is computed as what it is: twelve masses joined by thirty damped
-springs. Nothing about how it flexes is a canned animation.
+springs, with the plate a thirteenth on three more. Nothing about how it flexes is a canned animation.
 
 | | |
 |---|---|
@@ -47,17 +48,20 @@ springs. Nothing about how it flexes is a canned animation.
 
 ### What is from the book and what is mine
 
-I worked from memory of the book and from what readers told me, not from the text,
+I worked from memory of the book, from what readers told me and from the fan wiki,
+not from the text,
 so treat this as a fan's picture and not a reference.
 
 From the book, as far as I know: the icosahedron whose struts are shock absorbers,
 the gravel skin, the sixteen orbs in four nested levels of four turning about the
 Core (the book's later descriptions pack them more loosely; this is the first one), the four
-races, propulsion by atomic charges against a pusher plate, turning by
+races, propulsion by atomic charges against a pusher plate that is one side of the
+icosahedron and joined to the rest by shock absorbers, turning by
 counterweights on internal tracks, the Adrakhonic theorem on the hull, and the burn
 being seen from Arbre as a string of sparks.
 
-Mine: how it all looks from the side, the plate sitting on one corner, the ablative
+Mine: how it all looks from the side, the number of shock absorbers behind the
+plate, the ablative
 layer on the plate (usual for this kind of drive), how stiff the frame is, and
 the timing.
 
@@ -67,7 +71,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.6.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.7.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -76,11 +80,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.6-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.7-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.6_amd64.deb
+    sudo apt install ./daban-urnud_1.0.7_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the
