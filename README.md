@@ -24,13 +24,15 @@ One change of course, about a minute and a half, then another at a different ang
 - **In orbit.** The ship coasts and Arbre slides by underneath. A panel shows the
   orbstacks inside, close to: four levels of four orbs about the Core, the four
   in a level touching, and each level turned an eighth of a turn so that it nests
-  in the hollows of the last, with lattice towers up the outside. They go round
+  in the hollows of the last, with a tube from each orb to the Core and lattice
+  towers up the outside. One orb is cut open on the side that comes round to
+  face you: half full of water, with houseboats and their gardens afloat on it. They go round
   the Core as one piece, passing behind it and in front of it, and never stop.
 - **The turn.** No thrusters. Counterweights run round tracks inside the ship,
   out of sight, and the ship swings round the other way.
 - **The burn.** A charge drops out through the plate every second or two, flies a
   little way aft and goes off. The plasma hits the plate, and the plate's ablative
-  layer glows and boils off. The plate is driven in on its three shock
+  layer glows and boils off. The plate is driven in on its ring of shock
   absorbers, rods sliding into cylinders; they push on the corners of the stern
   face, and the squeeze runs forward through the frame to the bow. The stars begin to slide by.
 - **The new course.** The burn ends and the ship coasts again.
@@ -71,7 +73,7 @@ Packages are on the [releases page](../../releases).
 
 ### Windows
 
-Run `DabanUrnud-Setup-1.0.9.exe`. It asks for administrator rights, because Windows
+Run `DabanUrnud-Setup-1.0.10.exe`. It asks for administrator rights, because Windows
 only lists screensavers that are in its own system folder. After that "The Daban
 Urnud" is in Screen Saver Settings with the others, already selected. Uninstall from
 Apps.
@@ -80,11 +82,11 @@ Apps.
 
 **Fedora, Nobara** (built on Fedora 44):
 
-    sudo dnf install ./daban-urnud-1.0.9-1.fc44.x86_64.rpm
+    sudo dnf install ./daban-urnud-1.0.10-1.fc44.x86_64.rpm
 
 **Debian, Ubuntu, Mint** (Ubuntu 24.04 / Debian 13 or later):
 
-    sudo apt install ./daban-urnud_1.0.9_amd64.deb
+    sudo apt install ./daban-urnud_1.0.10_amd64.deb
 
 From your next login it starts by itself after five minutes idle, and any key or
 mouse movement ends it. To start the watcher without logging out, or to change the
@@ -135,7 +137,7 @@ everything they need:
 MIT. *Anathem* and the Daban Urnud are Neal Stephenson's; this is an unofficial fan
 project.
 
-The pictures (the plate, the joints, the gravel, the struts, the orb, the hub, the charge,
+The pictures (the plate, the joints, the gravel, the struts, the orbs, the hub, the charge,
 the blasts, Arbre and the scroll) were drawn with Google Gemini and
 prepared by `tools/make_sprites.py`. Images are decoded with
 [stb_image](https://github.com/nothings/stb) (public domain).

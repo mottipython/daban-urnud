@@ -79,6 +79,9 @@ def main():
     p = trim(key(load(f"{SRC}/plate.jpeg")))
     save(p, round(p.shape[1] * 700 / p.shape[0]), 700, f"{OUT}/plate.png")
     print("plate")
+    p = trim(key(load(f"{SRC}/orbcut.jpeg")))  # an orb cut open, with the water and the houseboats
+    save(p, round(p.shape[1] * 460 / p.shape[0]), 460, f"{OUT}/orbcut.png")
+    print("orbcut")
     # the frame: the joint at each corner, and the gravel skin as a square of texture
     got = pieces(key(load(f"{SRC}/frame.jpeg")), 1)
     j = trim(got[0])

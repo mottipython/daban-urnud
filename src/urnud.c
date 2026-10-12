@@ -54,6 +54,7 @@ ART(joint, "joint.png")
 ART(gravel, "gravel.jpg")
 ART(plate, "plate.png")
 ART(orb, "orb.png")
+ART(orbcut, "orbcut.png")
 ART(hub, "hub.png")
 ART(charge, "charge.png")
 ART(cyl, "cyl.png")
@@ -62,7 +63,7 @@ ART(flash, "flash.jpg")
 ART(plasma, "plasma.jpg")
 ART(vapour, "vapour.jpg")
 
-enum { SP_SPACE, SP_BANNER, SP_JOINT, SP_GRAVEL, SP_PLATE, SP_ORB, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
+enum { SP_SPACE, SP_BANNER, SP_JOINT, SP_GRAVEL, SP_PLATE, SP_ORB, SP_ORBCUT, SP_HUB, SP_CHARGE, SP_CYL, SP_ROD, SP_FLASH, SP_PLASMA, SP_VAPOUR, NSPRITE };
 static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } sprite[NSPRITE] = {
     {art_space, art_space_end},
     {art_banner, art_banner_end},
@@ -70,6 +71,7 @@ static struct { const unsigned char *file, *end; int w, h; unsigned char *px; } 
     {art_gravel, art_gravel_end},
     {art_plate, art_plate_end},
     {art_orb, art_orb_end},
+    {art_orbcut, art_orbcut_end},
     {art_hub, art_hub_end},
     {art_charge, art_charge_end},
     {art_cyl, art_cyl_end},
@@ -555,7 +557,7 @@ static void draw_core(double px, double py, double pw, double ph)
     double cx = px + pw / 2, cy = py + ph / 2;
     /* we look from the side and a little from above; z is towards us */
     double tilt = 1.3, ay = -sin(tilt), az = cos(tilt), vy = az, vz = sin(tilt);
-    double rho = ph / 5.7, reach = rho * 1.4142 * 0.9, gap = rho * 1.682 * 0.9, tower = rho * 2.0;
+    double rho = ph / 6.0, reach = rho * 1.4142, gap = rho * 1.682, tower = rho * 2.12;
     enum { NSEG = 12, NTOW = 8, TSEG = 6, NITEM = 16 + NSEG + NTOW * TSEG };
     Item it[NITEM];
     int ni = 0;
@@ -576,8 +578,12 @@ static void draw_core(double px, double py, double pw, double ph)
             double along = (n / 4 - 1.5) * gap, a = spin + (n % 4) * M_PI / 2 + (n / 4) * M_PI / 4;
             double x = cx + cos(a) * reach, y = cy + ay * along + vy * sin(a) * reach;
             double size = 1 + 0.07 * sin(a);
+            /* the tube that joins it to the Core */
+            line(cx, cy + ay * along, x, y, rho * 0.36, col(INK, 1));
+            line(cx, cy + ay * along, x, y, rho * 0.26, col(STEEL, 1));
             flush(ren);
-            turned(SP_ORB, x, y, 2 * rho * size, 0);
+            /* one orb is cut open on the side that faces us as it comes round */
+            turned(n == 9 && sin(a) > 0 ? SP_ORBCUT : SP_ORB, x, y, 2 * rho * size, 0);
         } else if (it[i].kind == 1) {
             double t0 = -ce + it[i].n * 2 * ce / NSEG - 0.5, t1 = t0 + 2 * ce / NSEG + 1;
             line(cx, cy + ay * t0, cx, cy + ay * t1, rho * 0.62, col(INK, 1));
@@ -630,9 +636,12 @@ static void draw_scene(SDL_Renderer *r, int w, int h)
     draw_frame();
     double px = plate_x;
     /* the plate's shock absorbers, from its back to the corners of the stern face */
-    for (int i = 0; i < 3; i++) {
-        double from[3] = {px + 0.035, pos[i][1] * 0.82, pos[i][2] * 0.82};
+    for (int i = 0; i < 3; i++) { /* drawn in a ring of six: one to each corner and one to the middle of each edge */
+        int j = (i + 1) % 3;
+        double mid[3] = {(pos[i][0] + pos[j][0]) / 2, (pos[i][1] + pos[j][1]) / 2, (pos[i][2] + pos[j][2]) / 2};
+        double from[3] = {px + 0.035, pos[i][1] * 0.82, pos[i][2] * 0.82}, fromm[3] = {px + 0.035, mid[1] * 0.82, mid[2] * 0.82};
         strut(from, pos[i]);
+        strut(fromm, mid);
     }
     /* charges on their way out */
     for (int i = 0; i < NFLY; i++) if (fly[i] >= 0) {
