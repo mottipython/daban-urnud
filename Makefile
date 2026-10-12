@@ -1,5 +1,5 @@
 # The Daban Urnud - a screensaver of the Geometers' ship from Neal Stephenson's "Anathem"
-VERSION  := 1.0.4
+VERSION  := 1.0.5
 PREFIX   ?= /usr
 SYSCONFDIR ?= /etc
 DESTDIR  ?=

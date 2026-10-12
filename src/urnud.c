@@ -524,7 +524,9 @@ static void draw_core(double cx, double cy, double R)
         o[n].hx = cx + ax * along; o[n].hy = cy + ay * along;
         o[n].x = o[n].hx + (ux * c + vx * sn) * reach; o[n].y = o[n].hy + (uy * c + vy * sn) * reach;
         o[n].z = az * along + vz * sn * reach;
-        o[n].deg = atan2(o[n].y - o[n].hy, o[n].x - o[n].hx) * 180 / M_PI + 90;
+        /* every orb is drawn the same way up, its band of windows lying along the Core:
+         * the whole stack goes round the Core as one piece and no orb turns on its own */
+        o[n].deg = atan2(ay, ax) * 180 / M_PI;
     }
     for (int i = 0; i < 16; i++) for (int j = i + 1; j < 16; j++) if (o[j].z < o[i].z) { t = o[i]; o[i] = o[j]; o[j] = t; }
     /* the icosahedron they fill, corner to corner along the Core: 5 orb-radii from
