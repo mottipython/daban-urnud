@@ -1,7 +1,7 @@
 # The Daban Urnud
 
 A screensaver of the Geometers' ship, from Neal Stephenson's novel *Anathem*. Runs
-on Linux, Windows and macOS.
+on Linux, Windows and macOS. One of the [Anathem screensavers](https://github.com/mottipython/anathem-screensavers).
 
 ![A propulsion charge bursting against the pusher plate](docs/screenshots/05-the-flash.jpg)
 
