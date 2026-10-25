@@ -360,11 +360,13 @@ static void frame_step(double h)
         double d[3], len = 0, closing = 0;
         for (int c = 0; c < 3; c++) { d[c] = pos[b][c] - pos[a][c]; len += d[c] * d[c]; }
         len = sqrt(len);
-        for (int c = 0; c < 3; c++) { d[c] /= len; closing += (vel[b][c] - vel[a][c]) * d[c]; }
-        double push = 260 * (len - edge_len) + 9 * closing;
-        double short_by = edge_len * 0.86 - len; /* near the end of its travel a strut stiffens sharply */
-        if (short_by > 0) push -= 4000 * short_by;
-        for (int c = 0; c < 3; c++) { f[a][c] += push * d[c]; f[b][c] -= push * d[c]; }
+        if (len > 1e-6) {
+            for (int c = 0; c < 3; c++) { d[c] /= len; closing += (vel[b][c] - vel[a][c]) * d[c]; }
+            double push = 260 * (len - edge_len) + 9 * closing;
+            double short_by = edge_len * 0.86 - len; /* near the end of its travel a strut stiffens sharply */
+            if (short_by > 0) push -= 4000 * short_by;
+            for (int c = 0; c < 3; c++) { f[a][c] += push * d[c]; f[b][c] -= push * d[c]; }
+        }
     }
     for (int i = 0; i < NV; i++) for (int c = 0; c < 3; c++) { com[c] += pos[i][c]; comv[c] += vel[i][c]; }
     /* the plate's own three shock absorbers, one to each corner of the stern face */
@@ -790,13 +792,18 @@ static int snapshot(void)
 
 static void usage(void)
 {
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "The Daban Urnud",
+    static const char text[] =
         "The Daban Urnud screensaver\n\n"
         "  --window        run in a window (Esc or Q quits)\n"
         "  --speed X       animation speed, 1 = normal\n"
         "  --seed N        repeatable sequence\n"
         "  --snapshot FILE.bmp [--time SECONDS] [--size WxH]\n"
-        "                  write a picture of the screensaver after SECONDS and exit\n", NULL);
+        "                  write a picture of the screensaver after SECONDS and exit\n";
+    if (getenv("SDL_VIDEODRIVER") && !strcmp(getenv("SDL_VIDEODRIVER"), "dummy")) {
+        fputs(text, stderr);
+        return;
+    }
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "The Daban Urnud", text, NULL);
 }
 
 int main(int argc, char **argv)
@@ -813,11 +820,15 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--speed") && i + 1 < argc) opt_speed = SDL_atof(argv[++i]);
         else if (!strcmp(a, "--seed") && i + 1 < argc) opt_seed = SDL_strtoull(argv[++i], NULL, 10);
         else if (!strcmp(a, "--snapshot") && i + 1 < argc) opt_snapshot = argv[++i];
-        else if (!strcmp(a, "--time") && i + 1 < argc) opt_time = SDL_atof(argv[++i]);
+        else if (!strcmp(a, "--time") && i + 1 < argc) {
+            opt_time = SDL_atof(argv[++i]);
+            if (opt_time < 0.0) opt_time = 0.0;
+            if (opt_time > 86400.0) opt_time = 86400.0;
+        }
         else if (!strcmp(a, "--size") && i + 1 < argc) {
             const char *x = SDL_strchr(argv[++i], 'x');
             opt_w = SDL_atoi(argv[i]); opt_h = x ? SDL_atoi(x + 1) : 0;
-            if (opt_w < 64 || opt_h < 64) { usage(); return 1; }
+            if (opt_w < 64 || opt_h < 64 || opt_w > 8192 || opt_h > 8192) { usage(); return 1; }
         }
         else { usage(); return 1; }
     }
